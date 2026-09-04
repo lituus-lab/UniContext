@@ -26,12 +26,14 @@ path = "."
 visibility = "private"
 """)
     let manifest = loadManifest(manifestPath)
-    let proposalPath = propose(manifest, "proposal.writer.fixture", "Candidate lesson",
+    let proposalPath = propose(manifest, "proposal.writer.fixture",
+      "Candidate lesson",
       "Evidence must accompany memory.", @["test_writer:pass"])
     check fileExists(proposalPath)
     check parseMarkdown(readFile(proposalPath), proposalPath).validate.len == 0
     expect MemoryWriteError:
-      discard propose(manifest, "proposal.writer.fixture", "Duplicate", "Forbidden", @[])
+      discard propose(manifest, "proposal.writer.fixture", "Duplicate",
+          "Forbidden", @[])
 
     let startPath = sessionStart(manifest, "writer-fixture", "unicontext", "Test the log")
     let updatePath = sessionUpdate(manifest, "writer-fixture", "tests-pass",

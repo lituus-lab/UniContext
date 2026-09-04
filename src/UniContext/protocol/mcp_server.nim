@@ -22,7 +22,8 @@ proc toolsList(): JsonNode =
      "description": "Run a sourced lexical search across the allowed knowledge roots.",
      "inputSchema": {"type": "object", "properties": {
        "query": property("string", "FTS5 terms to search for"),
-       "limit": property("integer", "Maximum number of sections")}, "required": ["query"]},
+       "limit": property("integer", "Maximum number of sections")},
+           "required": ["query"]},
      "annotations": {"readOnlyHint": true, "destructiveHint": false,
        "idempotentHint": true, "openWorldHint": false}},
     {"name": "memory_get", "title": "Read knowledge note",
@@ -83,7 +84,8 @@ proc hitJson(hit: SearchHit): JsonNode =
   %*{"id": hit.noteId, "path": hit.path, "heading": hit.heading,
     "content": hit.content, "type": hit.noteType, "status": hit.status,
     "visibility": hit.visibility, "authority": hit.authority,
-    "updated": hit.updated, "review_after": hit.reviewAfter, "root": hit.rootName}
+    "updated": hit.updated, "review_after": hit.reviewAfter,
+    "root": hit.rootName}
 
 proc packetJson(packet: ContextPacket; indexFresh: bool): JsonNode =
   var sources = newJArray()
@@ -92,7 +94,8 @@ proc packetJson(packet: ContextPacket; indexFresh: bool): JsonNode =
       "heading": source.heading, "authority": source.authority,
       "updated": source.updated, "stale": source.stale})
   %*{"context_version": packet.version, "query": packet.query,
-    "budget_tokens": packet.budgetTokens, "estimated_tokens": packet.estimatedTokens,
+    "budget_tokens": packet.budgetTokens,
+    "estimated_tokens": packet.estimatedTokens,
     "knowledge_index_fresh": indexFresh,
     "rendered_context": packet.rendered,
     "git": {"requested_path": packet.git.requestedPath, "root": packet.git.root,
@@ -144,14 +147,16 @@ proc callTool(manifest: Manifest; name: string; arguments: JsonNode): JsonNode =
       "knowledge_index_fresh": manifest.indexIsFresh})
   of "memory_context":
     let query = arguments.argument("query")
-    let budget = if arguments.hasKey("budget_tokens"): arguments["budget_tokens"].getInt else: 4000
+    let budget = if arguments.hasKey("budget_tokens"): arguments[
+        "budget_tokens"].getInt else: 4000
     if budget < 128 or budget > 32_768:
       raise newException(ValueError, "budget_tokens must be between 128 and 32768")
     let git = collectGitState(arguments.optionalArgument("repository"))
     let indexFresh = manifest.indexIsFresh
     let initialWarnings = if indexFresh: @[] else:
       @["knowledge index is stale; rebuild it before relying on memory"]
-    let packet = buildContextPacket(query, database.search(query, 50), budget, git = git,
+    let packet = buildContextPacket(query, database.search(query, 50), budget,
+        git = git,
       initialWarnings = initialWarnings)
     toolResult(packet.packetJson(indexFresh), text = packet.rendered)
   of "memory_propose":
@@ -176,7 +181,8 @@ proc callTool(manifest: Manifest; name: string; arguments: JsonNode): JsonNode =
 
 proc descriptors(): seq[ToolDescriptor] =
   for item in toolsList()["tools"]:
-    result.add(ToolDescriptor(name: item["name"].getStr, title: item["title"].getStr,
+    result.add(ToolDescriptor(name: item["name"].getStr, title: item[
+        "title"].getStr,
       description: item["description"].getStr, inputSchema: item["inputSchema"],
       annotations: item["annotations"]))
 
@@ -187,10 +193,11 @@ proc newMcpServer*(manifestPath: string): McpServer =
       manifestPath)
   let capturedManifest = result.manifest
   result.core = newServer(ServerInfo(name: "unicontext", title: "UniContext",
-    version: "0.1.0", description: "Private, sourced context compiler"), LatestProtocol,
+    version: "0.1.0", description: "Private, sourced context compiler"),
+    LatestProtocol,
     @SupportedProtocols, descriptors(),
     proc(name: string; arguments: JsonNode): JsonNode =
-      callTool(capturedManifest, name, arguments),
+    callTool(capturedManifest, name, arguments),
     "Use current code and tests before stored memory; report conflicts.")
 
 proc handle*(server: var McpServer; message: JsonNode): JsonNode =

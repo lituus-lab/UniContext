@@ -4,7 +4,8 @@ import UniContext/[context/builder, domain/types]
 
 suite "Context compilation":
   test "publishes a parseable versioned context packet schema":
-    let schemaPath = currentSourcePath.parentDir.parentDir / "fixtures" / "context" /
+    let schemaPath = currentSourcePath.parentDir.parentDir / "fixtures" /
+        "context" /
       "context-packet-v1.schema.json"
     let schema = parseFile(schemaPath)
     check schema["properties"]["context_version"]["const"].getInt == ContextPacketVersion
@@ -12,9 +13,12 @@ suite "Context compilation":
 
   test "ranks authority and excludes drafts":
     let hits = @[
-      SearchHit(noteId: "draft", status: "draft", authority: "maintainer", content: "draft"),
-      SearchHit(noteId: "agent", status: "accepted", authority: "agent", content: "agent memory"),
-      SearchHit(noteId: "test", path: "proof.md", heading: "Evidence", status: "accepted",
+      SearchHit(noteId: "draft", status: "draft", authority: "maintainer",
+          content: "draft"),
+      SearchHit(noteId: "agent", status: "accepted", authority: "agent",
+          content: "agent memory"),
+      SearchHit(noteId: "test", path: "proof.md", heading: "Evidence",
+        status: "accepted",
         authority: "test", updated: "2026-08-20", reviewAfter: "2026-08-22",
         content: "reproducible evidence")]
     let packet = buildContextPacket("verify", hits, 500, "2026-08-21")
@@ -31,8 +35,10 @@ suite "Context compilation":
     check packet.warnings.len == 1
 
   test "renders bounded live repository state before stored memory":
-    let git = GitState(root: "/tmp/example", branch: "feature/context", commit: "abc123",
-      status: "## feature/context\n M src/example.nim", diff: "+change", available: true)
+    let git = GitState(root: "/tmp/example", branch: "feature/context",
+      commit: "abc123",
+      status: "## feature/context\n M src/example.nim", diff: "+change",
+      available: true)
     let hits = @[SearchHit(noteId: "note", path: "note.md", heading: "Note",
       status: "accepted", authority: "maintainer", updated: "2026-08-21",
       content: "Stored memory")]
@@ -43,7 +49,8 @@ suite "Context compilation":
 
   test "clips live repository output to the packet budget":
     let git = GitState(root: "/tmp/example", branch: "main", commit: "abc123",
-      status: repeat("M file\n", 200), diff: repeat("+large diff\n", 500), available: true)
+      status: repeat("M file\n", 200), diff: repeat("+large diff\n", 500),
+          available: true)
     let packet = buildContextPacket("inspect", @[], 500, "2026-08-21", git)
     check packet.git.truncated
     check packet.estimatedTokens <= packet.budgetTokens

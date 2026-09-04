@@ -79,7 +79,8 @@ proc buildContextPacket*(query: string; hits: seq[SearchHit]; budgetTokens: int;
     if result.git.status.len > 0:
       result.rendered.add("\n### Git status\n\n```text\n" & result.git.status & "\n```\n")
     if result.git.diff.len > 0:
-      result.rendered.add("\n### Working-tree diff\n\n```diff\n" & result.git.diff & "\n```\n")
+      result.rendered.add("\n### Working-tree diff\n\n```diff\n" &
+          result.git.diff & "\n```\n")
     if result.git.truncated:
       result.warnings.add("live Git output was truncated")
   elif result.git.warning.len > 0:
@@ -98,7 +99,8 @@ proc buildContextPacket*(query: string; hits: seq[SearchHit]; budgetTokens: int;
       heading: hit.heading, authority: hit.authority, updated: hit.updated,
       stale: hit.stale))
     if hit.stale:
-      result.warnings.add("memory requires review: " & hit.noteId & " (review_after " & hit.reviewAfter & ")")
+      result.warnings.add("memory requires review: " & hit.noteId &
+          " (review_after " & hit.reviewAfter & ")")
   result.estimatedTokens = (result.rendered.len + 3) div 4
   if result.sources.len == 0:
     result.warnings.add("no eligible source fits within the budget")

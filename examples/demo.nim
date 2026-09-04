@@ -37,4 +37,5 @@ when isMainModule:
     echo ""
 
   echo "--- the packet a model is given, at 1024 tokens ---"
-  echo buildContextPacket("how is context assembled?", hits, 1024).rendered.strip
+  echo buildContextPacket("how is context assembled?", hits,
+      1024).rendered.strip

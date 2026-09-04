@@ -14,7 +14,8 @@ suite "Index SQLite FTS5":
   test "keeps the portable SQL fixture identical to the runtime schema":
     let fixture = currentSourcePath.parentDir.parentDir / "fixtures" / "sql" / "001-initial.sql"
     check readFile(fixture).strip == SchemaSql.strip
-    let metadataFixture = currentSourcePath.parentDir.parentDir / "fixtures" / "sql" /
+    let metadataFixture = currentSourcePath.parentDir.parentDir / "fixtures" /
+        "sql" /
       "002-metadata.sql"
     check readFile(metadataFixture).strip == MetadataSchemaSql.strip
 

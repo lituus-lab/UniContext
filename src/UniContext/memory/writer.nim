@@ -16,7 +16,8 @@ proc yaml(value: string): string =
 
 proc writeNew(path, content: string) =
   if fileExists(path) or dirExists(path) or symlinkExists(path):
-    raise newException(MemoryWriteError, "append-only write refused because target exists: " & path)
+    raise newException(MemoryWriteError,
+        "append-only write refused because target exists: " & path)
   let parent = path.parentDir
   if not dirExists(parent): createDir(parent)
   writeFile(path, content)
@@ -56,7 +57,8 @@ proc sessionDirectory(manifest: Manifest; sessionId: string): string =
   let base = requireDirectory(manifest, manifest.sessionDir, "session_dir")
   result = manifest.secureWriteDirectory(base / sessionId)
 
-proc sessionStart*(manifest: Manifest; sessionId, project, objective: string): string =
+proc sessionStart*(manifest: Manifest; sessionId, project,
+    objective: string): string =
   if objective.strip.len == 0:
     raise newException(MemoryWriteError, "objective is required")
   let directory = sessionDirectory(manifest, sessionId)
@@ -69,7 +71,8 @@ proc sessionStart*(manifest: Manifest; sessionId, project, objective: string): s
     objective.strip & "\n"
   writeNew(result, body)
 
-proc sessionUpdate*(manifest: Manifest; sessionId, eventId, summary: string): string =
+proc sessionUpdate*(manifest: Manifest; sessionId, eventId,
+    summary: string): string =
   validateIdentifier(eventId, "event_id")
   if summary.strip.len == 0:
     raise newException(MemoryWriteError, "summary is required")
@@ -80,11 +83,13 @@ proc sessionUpdate*(manifest: Manifest; sessionId, eventId, summary: string): st
   let noteId = "session." & sessionId & "." & eventId
   let body = "---\nid: " & yaml(noteId) &
     "\ntype: session\nstatus: active\nvisibility: private\nauthority: agent\n" &
-    "created: " & today() & "\nupdated: " & today() & "\n---\n# Session update\n\n" &
+    "created: " & today() & "\nupdated: " & today() &
+        "\n---\n# Session update\n\n" &
     summary.strip & "\n"
   writeNew(result, body)
 
-proc sessionClose*(manifest: Manifest; sessionId, outcome, nextAction: string): string =
+proc sessionClose*(manifest: Manifest; sessionId, outcome,
+    nextAction: string): string =
   if outcome.strip.len == 0:
     raise newException(MemoryWriteError, "outcome is required")
   let directory = sessionDirectory(manifest, sessionId)
@@ -94,7 +99,8 @@ proc sessionClose*(manifest: Manifest; sessionId, outcome, nextAction: string): 
   let noteId = "session." & sessionId & ".close"
   var body = "---\nid: " & yaml(noteId) &
     "\ntype: session\nstatus: archived\nvisibility: private\nauthority: agent\n" &
-    "created: " & today() & "\nupdated: " & today() & "\n---\n# Session close\n\n" &
+    "created: " & today() & "\nupdated: " & today() &
+        "\n---\n# Session close\n\n" &
     "## Outcome\n\n" & outcome.strip & "\n"
   if nextAction.strip.len > 0:
     body.add("\n## Next action\n\n" & nextAction.strip & "\n")
