@@ -41,8 +41,9 @@ proc ranked*(hits: seq[SearchHit]; today = now().format("yyyy-MM-dd")): seq[Sear
 proc buildContextPacket*(query: string; hits: seq[SearchHit]; budgetTokens: int;
     today = now().format("yyyy-MM-dd"); git = GitState();
     initialWarnings: seq[string] = @[]): ContextPacket =
-  if budgetTokens < 128 or budgetTokens > 32_768:
-    raise newException(ValueError, "budget_tokens must be between 128 and 32768")
+  if budgetTokens < MinBudgetTokens or budgetTokens > MaxBudgetTokens:
+    raise newException(ValueError, "budget_tokens must be between " &
+      $MinBudgetTokens & " and " & $MaxBudgetTokens)
   if query.len == 0:
     raise newException(ValueError, "query must not be empty")
   result.version = ContextPacketVersion

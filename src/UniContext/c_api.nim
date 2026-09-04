@@ -1,12 +1,26 @@
 ## SPDX-License-Identifier: Apache-2.0
 ## Copyright 2026 lituus-lab
-var VersionBytes: array[6, char] = ['1', '.', '0', '.', '0', '\0']
+##
+## A deliberately narrow C ABI: the version pair every Uni* library exposes,
+## plus the one predicate a C caller needs before it asks for a packet. A
+## packet crosses the boundary as JSON through the MCP surface, not as a
+## struct, so there is nothing else to marshal here.
+import UniContext/domain/types
+
+const UniContextVersionC: cstring = "1.0.0"
+  ## Checked against the manifest, the header and the wheel by
+  ## `tests/test_version.nim`.
+
 {.push exportc, cdecl, dynlib.}
+
 proc unicontext_version(): cstring =
-  let value = "1.0.0"
-  copyMem(addr VersionBytes[0], value.cstring, VersionBytes.len)
-  cast[cstring](addr VersionBytes[0])
+  UniContextVersionC
+
 proc unicontext_abi_version(): cint = 1
+
 proc unicontext_valid_budget(tokens: cint): cint =
-  if tokens >= 128 and tokens <= 32768: 1 else: 0
+  ## Mirrors `buildContextPacket`'s precondition, from the same constants.
+  if tokens >= cint(MinBudgetTokens) and tokens <= cint(MaxBudgetTokens): 1
+  else: 0
+
 {.pop.}

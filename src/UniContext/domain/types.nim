@@ -1,4 +1,12 @@
 ## SPDX-License-Identifier: Apache-2.0
+
+const
+  MinBudgetTokens* = 128
+  MaxBudgetTokens* = 32_768
+    ## Bounds of a context packet's token budget. They live here because the
+    ## builder, the C ABI and the error text all state them; three copies of
+    ## one rule drift.
+
 type
   Frontmatter* = object
     fields*: seq[(string, string)]
