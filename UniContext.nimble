@@ -7,6 +7,12 @@ author        = "lituus-lab"
 description   = "Compile knowledge sources into sourced context packets"
 license       = "Apache-2.0"
 srcDir        = "src"
+# The CLI cannot live at `src/unicontext.nim`: on a case-insensitive
+# filesystem that is the same path as the `src/UniContext.nim` umbrella, so
+# it sits under the package directory and is renamed on the way out.
+namedBin["UniContext/cli"] = "unicontext"
+
+const CliBinary = "build/unicontext".toExe
 
 requires "nim >= 2.2.0"
 requires "https://github.com/lbartoletti/NimContracts#main"
@@ -67,6 +73,11 @@ proc gate(task: string): string =
   if not fileExists(gateExe):
     exec "nim c --hints:off -o:" & gateExe & " tools/gate.nim"
   gateExe & " " & task
+
+proc buildCli() =
+  ## `tests/test_process` drives the real binary, so every suite that runs it
+  ## builds it first.
+  exec "nim c --threads:on --path:src -o:" & CliBinary & " src/UniContext/cli.nim"
 
 task canary, "Must fail: proves the gate still catches a broken build":
   # No `done` here on purpose. If this task ever passes the gate, the gate has
@@ -140,7 +151,12 @@ task docs, "API reference + book into pages/ — what CI publishes":
        "pages/api/nimdoc.out.css"
   done "docs"
 
+task cli, "The unicontext command-line binary":
+  buildCli()
+  done "cli"
+
 task test, "Nim tests (debug, contracts active)":
+  buildCli()
   exec "nim c -r --path:src -o:build/test_context tests/test_context.nim"
   exec "nim c -r --path:src -o:build/test_index tests/test_index.nim"
   exec "nim c -r --path:src -o:build/test_markdown tests/test_markdown.nim"
@@ -152,6 +168,7 @@ task test, "Nim tests (debug, contracts active)":
   done "test"
 
 task testRelease, "Nim tests (release, contracts compiled away)":
+  buildCli()
   exec "nim c -r -d:release --path:src -o:build/test_context_rel tests/test_context.nim"
   exec "nim c -r -d:release --path:src -o:build/test_index_rel tests/test_index.nim"
   exec "nim c -r -d:release --path:src -o:build/test_markdown_rel tests/test_markdown.nim"
@@ -163,6 +180,7 @@ task testRelease, "Nim tests (release, contracts compiled away)":
   done "testRelease"
 
 task testCi, "Nim tests CI runs, debug — narrow this in a clone whose suite grows slow":
+  buildCli()
   exec "nim c -r --path:src -o:build/test_context tests/test_context.nim"
   exec "nim c -r --path:src -o:build/test_index tests/test_index.nim"
   exec "nim c -r --path:src -o:build/test_markdown tests/test_markdown.nim"
@@ -174,6 +192,7 @@ task testCi, "Nim tests CI runs, debug — narrow this in a clone whose suite gr
   done "testCi"
 
 task testCiRelease, "Nim tests CI runs, release — narrow this in a clone whose suite grows slow":
+  buildCli()
   exec "nim c -r -d:release --path:src -o:build/test_context_rel tests/test_context.nim"
   exec "nim c -r -d:release --path:src -o:build/test_index_rel tests/test_index.nim"
   exec "nim c -r -d:release --path:src -o:build/test_markdown_rel tests/test_markdown.nim"

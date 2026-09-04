@@ -1,7 +1,11 @@
 ## SPDX-License-Identifier: Apache-2.0
 import std/[json, os, osproc, streams, strutils, times, unittest]
 
-const TestBinary = "/tmp/unicontext-test-cli"
+const Exe = when defined(windows): ".exe" else: ""
+const TestBinary = currentSourcePath().parentDir.parentDir / "build" /
+  ("unicontext" & Exe)
+  ## Built by the `cli` task, beside the suites. A hard-coded /tmp path is not
+  ## a path on Windows, and a sibling checkout is not a build dependency.
 
 proc removeTree(path: string) =
   if not dirExists(path): return
