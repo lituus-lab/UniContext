@@ -26,9 +26,8 @@ nimcache/
 rnimcache/
 dnimcache/
 
-# docs output
+# docs output. `docs/` is prose and tracked: the `docs` task publishes to pages/.
 pages/
-docs/
 *.html
 nimdoc.out.css
 

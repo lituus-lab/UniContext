@@ -61,7 +61,7 @@ canonical section.
 Repository inspection is explicit. A caller should not pass a private worktree to a remote model
 unless sharing its status and diff with that model is acceptable.
 
-## Internal prototype modules
+## Modules
 
 - `text/markdown`: flat YAML frontmatter and Markdown sections;
 - `database`: UniContext schemas, migrations, and FTS5 queries over UniDatabase;
@@ -72,12 +72,17 @@ unless sharing its status and diff with that model is acceptable.
 - `memory`: append-only proposals and session events;
 - `protocol`: UniContext tool definitions and handlers over UniMCP.
 
-The UniContext modules remain application boundaries, not promises of public APIs.
+The layer order above is enforced, not documented: `vgraph.cfg` lists it and `nimble checkVGraph`
+fails an import that climbs it.
 
-## Extraction gates
+## Sibling engines
 
-UniMCP and the SQLite-first UniDatabase have been extracted as private sibling libraries and
-UniContext consumes them through local Nim paths. Neither library depends on UniContext. UniText
-remains uncreated until cross-format application fixtures define a shared document model and loss
-contract. Persistent Markdown shapes, SQL behavior, JSON-RPC fixtures, and context packet fields
-remain the portable contracts for a later Lituus implementation.
+UniContext consumes two sibling libraries, each declared in `UniContext.nimble` and fetched from
+its own repository:
+
+- [UniMCP](https://github.com/lituus-lab/UniMCP) supplies the JSON-RPC and MCP lifecycle;
+- [UniDatabase](https://github.com/lituus-lab/UniDatabase) supplies the SQLite lifecycle.
+
+Neither depends on UniContext. Each reaches UniContext through exactly one module --
+`protocol/mcp_server` and `database/store` -- and `vgraph.cfg` records that confinement so
+`nimble checkVGraph` fails an import from anywhere else.
