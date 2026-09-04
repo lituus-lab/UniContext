@@ -1,16 +1,7 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-<!-- Copyright 2026 lituus-lab -->
-# Security Policy
+# Security policy
 
-Report vulnerabilities privately (email the maintainer — see git history),
-not via a public issue. Include: description + impact, minimal reproducer,
-affected version (`unicontext_version()`).
+UniContext treats Markdown roots and write directories as untrusted boundaries. Applications must
+use a manifest, keep the index rebuildable, and never expose proposal or session roots as canonical
+memory without review.
 
-Only the latest released line is supported. The `0.1.x` C ABI is not yet frozen.
-
-## Surface
-
-- C ABI trusts its callers (C pointers, lengths) and never raises; out-of-range
-  input is clamped. Foreign callers validate untrusted input before calling.
-- Python binding adds the domain check and raises `ValueError`/`TypeError`.
-- Single-threaded, reentrant; no global mutable state.
+Security reports should be opened privately with the maintainers before public disclosure.

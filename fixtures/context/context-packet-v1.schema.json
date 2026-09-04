@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lituus.local/schemas/unicontext/context-packet-v1.schema.json",
+  "title": "UniContext context packet v1",
+  "type": "object",
+  "required": [
+    "context_version", "query", "budget_tokens", "estimated_tokens",
+    "knowledge_index_fresh", "rendered_context", "git", "sources", "warnings"
+  ],
+  "properties": {
+    "context_version": { "const": 1 },
+    "query": { "type": "string" },
+    "budget_tokens": { "type": "integer", "minimum": 128 },
+    "estimated_tokens": { "type": "integer", "minimum": 0 },
+    "knowledge_index_fresh": { "type": "boolean" },
+    "rendered_context": { "type": "string" },
+    "git": {
+      "type": "object",
+      "required": ["requested_path", "root", "branch", "commit", "status", "diff", "available", "truncated", "warning"]
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path", "heading", "authority", "updated", "stale"]
+      }
+    },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}
