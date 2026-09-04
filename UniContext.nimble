@@ -16,10 +16,12 @@ const CliBinary = "build/unicontext".toExe
 
 requires "nim >= 2.2.0"
 requires "https://github.com/lbartoletti/NimContracts#main"
-# `database/store` imports UniDatabase/sqlite. It was not declared, so a fresh
-# clone could not resolve what the code imports; vgraph.cfg names it too, and
-# `checkVGraph` refuses an engine that is not in both.
+# `database/store` imports UniDatabase and `protocol/mcp_server` imports
+# UniMCP. Neither was declared, so a fresh clone could not resolve what the
+# code imports; vgraph.cfg names them too, and `checkVGraph` refuses an engine
+# that is not in both.
 requires "https://github.com/lituus-lab/UniDatabase#main"
+requires "https://github.com/lituus-lab/UniMCP#main"
 
 # The book toolchain, needed by three tasks and by nothing the library ships.
 # Pinned to GitHub tags rather than the registry: the registry lags upstream
