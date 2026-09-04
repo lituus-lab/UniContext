@@ -36,7 +36,8 @@ proc visibilityLevel(value: string): int =
   else: -1
 
 proc addRoot(root, rootName, rootVisibility: string; database: Store;
-    report: var IndexReport; seenIds: var HashSet[string]; fingerprint: var uint64) =
+    report: var IndexReport; seenIds: var HashSet[string];
+        fingerprint: var uint64) =
   if not dirExists(root):
     raise newException(IOError, "missing root: " & root)
   const maxNoteBytes = 4 * 1024 * 1024

@@ -5,7 +5,8 @@ import UniContext/domain/types
 const
   DefaultGitOutputLimit* = 12_000
 
-proc runGit(repository: string; arguments: openArray[string]): tuple[output: string; code: int] =
+proc runGit(repository: string; arguments: openArray[string]): tuple[
+    output: string; code: int] =
   var process = startProcess("git", workingDir = repository, args = @arguments,
     options = {poUsePath, poStdErrToStdOut})
   defer: process.close()
@@ -19,7 +20,8 @@ proc bounded(value: string; limit: int; truncated: var bool): string =
   result = value[0 ..< limit]
   result.add("\n[output truncated by UniContext]")
 
-proc collectGitState*(repository: string; outputLimit = DefaultGitOutputLimit): GitState =
+proc collectGitState*(repository: string;
+    outputLimit = DefaultGitOutputLimit): GitState =
   result.requestedPath = repository
   if repository.len == 0:
     return
@@ -40,9 +42,11 @@ proc collectGitState*(repository: string; outputLimit = DefaultGitOutputLimit): 
     if commit.code == 0: result.commit = commit.output
     if result.branch.len == 0 and result.commit.len > 0:
       result.branch = "(detached HEAD)"
-    let status = runGit(absolute, ["status", "--short", "--branch", "--untracked-files=normal"])
+    let status = runGit(absolute, ["status", "--short", "--branch",
+        "--untracked-files=normal"])
     if status.code == 0:
-      result.status = bounded(status.output, outputLimit div 3, result.truncated)
+      result.status = bounded(status.output, outputLimit div 3,
+          result.truncated)
     let staged = runGit(absolute,
       ["diff", "--cached", "--no-ext-diff", "--unified=1", "--"])
     let unstaged = runGit(absolute, ["diff", "--no-ext-diff", "--unified=1", "--"])
@@ -52,7 +56,8 @@ proc collectGitState*(repository: string; outputLimit = DefaultGitOutputLimit): 
     if unstaged.code == 0 and unstaged.output.len > 0:
       if combinedDiff.len > 0: combinedDiff.add("\n\n")
       combinedDiff.add("# Unstaged changes\n" & unstaged.output)
-    result.diff = bounded(combinedDiff, outputLimit - result.status.len, result.truncated)
+    result.diff = bounded(combinedDiff, outputLimit - result.status.len,
+        result.truncated)
     result.available = true
   except OSError as error:
     result.warning = "cannot execute git: " & error.msg

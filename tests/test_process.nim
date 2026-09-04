@@ -14,8 +14,10 @@ proc removeTree(path: string) =
     else: removeFile(child)
   removeDir(path)
 
-proc run(arguments: openArray[string]; workingDirectory: string): tuple[output: string; code: int] =
-  let process = startProcess(TestBinary, workingDir = workingDirectory, args = @arguments,
+proc run(arguments: openArray[string]; workingDirectory: string): tuple[
+    output: string; code: int] =
+  let process = startProcess(TestBinary, workingDir = workingDirectory,
+    args = @arguments,
     options = {poStdErrToStdOut})
   result.output = process.outputStream.readAll
   result.code = process.waitForExit()
@@ -72,14 +74,16 @@ visibility = "private"
     check staleContext.code == 0
     let stalePacket = parseJson(staleContext.output)
     check not stalePacket["knowledge_index_fresh"].getBool
-    check "WARNING: knowledge index is stale" in stalePacket["rendered_context"].getStr
+    check "WARNING: knowledge index is stale" in stalePacket[
+        "rendered_context"].getStr
 
     let reindexed = run(["index", "--manifest", manifestPath], base)
     check reindexed.code == 0
 
     let server = startProcess(TestBinary, workingDir = base,
       args = @["serve", "--manifest", manifestPath], options = {})
-    let requestsPath = currentSourcePath.parentDir.parentDir / "fixtures" / "mcp" / "initialize.jsonl"
+    let requestsPath = currentSourcePath.parentDir.parentDir / "fixtures" /
+        "mcp" / "initialize.jsonl"
     var responses: seq[JsonNode]
     for requestLine in readFile(requestsPath).splitLines:
       if requestLine.len == 0: continue

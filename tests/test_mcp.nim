@@ -35,12 +35,14 @@ visibility = "private"
     var server = newMcpServer(manifestPath)
     let missingInitialize = server.handle(request(1, "initialize"))
     check missingInitialize["error"]["code"].getInt == -32602
-    let wrongInitialize = server.handle(request(2, "initialize", %*{"protocolVersion": 1}))
+    let wrongInitialize = server.handle(request(2, "initialize", %*{
+        "protocolVersion": 1}))
     check wrongInitialize["error"]["code"].getInt == -32602
     discard server.handle(request(3, "initialize", %*{
       "protocolVersion": LatestProtocol, "capabilities": {},
       "clientInfo": {"name": "fixture", "version": "1"}}))
-    discard server.handle(%*{"jsonrpc": "2.0", "method": "notifications/initialized"})
+    discard server.handle(%*{"jsonrpc": "2.0",
+        "method": "notifications/initialized"})
     let missingToolName = server.handle(request(4, "tools/call", %*{}))
     check missingToolName["result"]["isError"].getBool
     let wrongArguments = server.handle(request(5, "tools/call", %*{
@@ -95,7 +97,8 @@ visibility = "private"
     check initialized["result"]["protocolVersion"].getStr == "2025-11-25"
     check initialized["result"]["capabilities"].hasKey("tools")
     check not initialized["result"]["capabilities"].hasKey("prompts")
-    discard server.handle(%*{"jsonrpc": "2.0", "method": "notifications/initialized"})
+    discard server.handle(%*{"jsonrpc": "2.0",
+        "method": "notifications/initialized"})
 
     let listed = server.handle(request(2, "tools/list"))
     check listed["result"]["tools"].len == 7
@@ -120,7 +123,8 @@ visibility = "private"
     let proposed = server.handle(request(4, "tools/call", %*{
       "name": "memory_propose",
       "arguments": {"id": "proposal.mcp.fixture", "title": "Fixture proposal",
-        "summary": "The proposal remains non-canonical.", "evidence": ["test_mcp:pass"]}}))
+        "summary": "The proposal remains non-canonical.", "evidence": [
+            "test_mcp:pass"]}}))
     check proposed["result"]["isError"].getBool == false
     let proposalPath = base / "inbox" / "agent-proposals" / "proposal.mcp.fixture.md"
     check fileExists(proposalPath)

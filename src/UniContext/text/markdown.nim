@@ -24,13 +24,15 @@ proc parseFrontmatter(lines: seq[string]; stop: var int): Frontmatter =
     if line.strip.len > 0 and not line.strip.startsWith("#"):
       let separator = line.find(':')
       if separator <= 0:
-        raise newException(MarkdownError, "invalid flat YAML property at line " & $(index + 1))
+        raise newException(MarkdownError,
+            "invalid flat YAML property at line " & $(index + 1))
       let key = line[0 ..< separator].strip
       let value = stripScalar(line[separator + 1 .. ^1])
       if key.len == 0:
         raise newException(MarkdownError, "empty YAML key at line " & $(index + 1))
       if key in keys:
-        raise newException(MarkdownError, "duplicate YAML key at line " & $(index + 1) & ": " & key)
+        raise newException(MarkdownError, "duplicate YAML key at line " & $(
+            index + 1) & ": " & key)
       keys.incl(key)
       result.fields.add((key, value))
     inc index
@@ -88,6 +90,15 @@ proc parseMarkdown*(content, path: string): KnowledgeNote =
   if result.title.len == 0:
     raise newException(MarkdownError, "missing level-one heading or title property")
 
+proc isIsoDate(value: string): bool =
+  ## YYYY-MM-DD, shape only -- `parse` below decides whether the date exists.
+  ## A proc rather than one folded condition: nimpretty rewrites the folded
+  ## form into `'-'ornot`, which does not parse.
+  value.len == 10 and value[4] == '-' and value[7] == '-' and
+    value[0 .. 3].allCharsInSet(Digits) and
+    value[5 .. 6].allCharsInSet(Digits) and
+    value[8 .. 9].allCharsInSet(Digits)
+
 proc validate*(note: KnowledgeNote): seq[string] =
   const required = ["id", "type", "status", "visibility", "authority", "updated"]
   for key in required:
@@ -99,11 +110,12 @@ proc validate*(note: KnowledgeNote): seq[string] =
   if note.frontmatter.has("status") and note.frontmatter.get("status") notin
       ["draft", "proposed", "active", "accepted", "superseded", "archived"]:
     result.add("invalid status")
-  if note.frontmatter.has("authority") and note.frontmatter.get("authority") notin
-      ["agent", "human", "maintainer", "test", "code", "external"]:
+  if note.frontmatter.has("authority") and note.frontmatter.get(
+      "authority") notin ["agent", "human", "maintainer", "test", "code", "external"]:
     result.add("invalid authority")
   if note.frontmatter.has("type") and note.frontmatter.get("type") notin
-      ["system", "policy", "schema", "project", "decision", "constraint", "lesson",
+      ["system", "policy", "schema", "project", "decision", "constraint",
+       "lesson",
        "experiment", "session", "proposal"]:
     result.add("invalid type")
 
@@ -119,10 +131,7 @@ proc validate*(note: KnowledgeNote): seq[string] =
 
   for key in ["created", "updated", "review_after"]:
     let value = note.frontmatter.get(key)
-    if value.len > 0 and (value.len != 10 or value[4] != '-' or value[7] != '-' or
-        not value[0 .. 3].allCharsInSet(Digits) or
-        not value[5 .. 6].allCharsInSet(Digits) or
-        not value[8 .. 9].allCharsInSet(Digits)):
+    if value.len > 0 and not value.isIsoDate:
       result.add(key & " must use YYYY-MM-DD")
     elif value.len > 0:
       try:

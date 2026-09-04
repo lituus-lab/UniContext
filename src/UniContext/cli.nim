@@ -15,7 +15,8 @@ usage:
   unicontext serve --manifest PATH
 """
 
-proc options(): tuple[root, database, query, manifest, repository: string; limit, budget: int] =
+proc options(): tuple[root, database, query, manifest, repository: string;
+    limit, budget: int] =
   result.limit = 10
   result.budget = 4000
   let arguments = commandLineParams()
@@ -23,7 +24,7 @@ proc options(): tuple[root, database, query, manifest, repository: string; limit
   while index < arguments.len:
     var key = arguments[index]
     if not key.startsWith("-"):
-        raise newException(ValueError, "unexpected argument: " & key)
+      raise newException(ValueError, "unexpected argument: " & key)
     key = key.strip(chars = {'-'})
     var value: string
     let separator = key.find('=')
@@ -73,7 +74,8 @@ proc main() =
       output.add(%*{
         "id": hit.noteId, "path": hit.path, "heading": hit.heading,
         "snippet": hit.snippet, "type": hit.noteType, "status": hit.status,
-        "visibility": hit.visibility, "authority": hit.authority, "updated": hit.updated
+        "visibility": hit.visibility, "authority": hit.authority,
+        "updated": hit.updated
       })
     echo output.pretty
   of "context":
@@ -91,29 +93,36 @@ proc main() =
     let initialWarnings = if indexFresh: @[] else:
       @["knowledge index is stale; rebuild it before relying on memory"]
     let packetWithStatus = buildContextPacket(config.query,
-      database.search(config.query, max(config.limit, 50)), config.budget, git = git,
+      database.search(config.query, max(config.limit, 50)), config.budget,
+          git = git,
       initialWarnings = initialWarnings)
     var sources = newJArray()
     for source in packetWithStatus.sources:
       sources.add(%*{"id": source.noteId, "path": source.path,
         "heading": source.heading, "authority": source.authority,
         "updated": source.updated, "stale": source.stale})
-    echo (%*{"context_version": packetWithStatus.version, "query": packetWithStatus.query,
+    echo (%*{"context_version": packetWithStatus.version,
+      "query": packetWithStatus.query,
       "budget_tokens": packetWithStatus.budgetTokens,
       "estimated_tokens": packetWithStatus.estimatedTokens,
       "rendered_context": packetWithStatus.rendered, "sources": sources,
       "knowledge_index_fresh": indexFresh,
       "git": {"requested_path": packetWithStatus.git.requestedPath,
-        "root": packetWithStatus.git.root, "branch": packetWithStatus.git.branch,
-        "commit": packetWithStatus.git.commit, "status": packetWithStatus.git.status,
-        "diff": packetWithStatus.git.diff, "available": packetWithStatus.git.available,
+        "root": packetWithStatus.git.root,
+        "branch": packetWithStatus.git.branch,
+        "commit": packetWithStatus.git.commit,
+        "status": packetWithStatus.git.status,
+        "diff": packetWithStatus.git.diff,
+        "available": packetWithStatus.git.available,
         "truncated": packetWithStatus.git.truncated,
-        "warning": packetWithStatus.git.warning}, "warnings": packetWithStatus.warnings}).pretty
+        "warning": packetWithStatus.git.warning},
+        "warnings": packetWithStatus.warnings}).pretty
   of "status":
     if config.manifest.len == 0:
       raise newException(ValueError, "status requires --manifest")
     let manifest = loadManifest(config.manifest)
-    echo (%*{"database": manifest.database, "exists": fileExists(manifest.database),
+    echo (%*{"database": manifest.database, "exists": fileExists(
+        manifest.database),
       "fresh": manifest.indexIsFresh,
       "corpus_fingerprint": manifest.corpusFingerprint}).pretty
   of "serve":

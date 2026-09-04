@@ -91,7 +91,8 @@ proc loadManifest*(path: string): Manifest =
     if root.name.len == 0 or root.path.len == 0:
       raise newException(ManifestError, "each root requires name and path")
     if root.visibility notin ["private", "team", "public"]:
-      raise newException(ManifestError, "invalid root visibility: " & root.visibility)
+      raise newException(ManifestError, "invalid root visibility: " &
+          root.visibility)
     if not dirExists(root.path):
       raise newException(ManifestError, "root is not a directory: " & root.path)
     root.path = expandFilename(root.path)
