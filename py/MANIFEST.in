@@ -1,2 +1,6 @@
 include README.md
-recursive-include unicontext libUniContext.*
+include pyproject.toml
+include setup.py
+recursive-include unicontext *.py *.pyx *.c
+recursive-include _nimsrc *.nim *.nimble *.nims *.h
+global-exclude *.dll *.dylib *.so *.a *.lib *.o *.obj

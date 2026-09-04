@@ -1,8 +1,20 @@
-## SPDX-License-Identifier: Apache-2.0
-from unicontext import valid_budget, version
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 lituus-lab
+from unicontext import BUDGET_MAX, BUDGET_MIN, abi_version, valid_budget, version
 
-def test_budget_contract():
+
+def test_version_matches_the_manifest():
     assert version() == "1.0.0"
-    assert valid_budget(128)
-    assert valid_budget(32768)
+    assert abi_version() == 1
+
+
+def test_budget_bounds_come_from_the_header():
+    assert (BUDGET_MIN, BUDGET_MAX) == (128, 32768)
+
+
+def test_budget_contract_matches_the_bounds():
+    assert valid_budget(BUDGET_MIN)
+    assert valid_budget(BUDGET_MAX)
+    assert not valid_budget(BUDGET_MIN - 1)
+    assert not valid_budget(BUDGET_MAX + 1)
     assert not valid_budget(0)
