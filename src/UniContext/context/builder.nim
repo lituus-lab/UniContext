@@ -1,5 +1,6 @@
 ## SPDX-License-Identifier: Apache-2.0
 import std/[algorithm, strformat, times]
+import contracts
 import UniContext/domain/types
 
 proc authorityWeight(authority: string): int =
@@ -25,18 +26,41 @@ proc allowed(hit: SearchHit): bool =
 proc isStale(reviewAfter, today: string): bool =
   reviewAfter.len > 0 and reviewAfter < today
 
-proc ranked*(hits: seq[SearchHit]; today = now().format("yyyy-MM-dd")): seq[SearchHit] =
-  for candidate in hits:
-    if candidate.allowed:
-      var hit = candidate
-      hit.rank = authorityWeight(hit.authority) + statusWeight(hit.status)
-      hit.stale = isStale(hit.reviewAfter, today)
-      if hit.stale: hit.rank -= 20
-      result.add(hit)
-  result.sort(proc(a, b: SearchHit): int =
-    result = cmp(b.rank, a.rank)
-    if result == 0: result = cmp(b.updated, a.updated)
-    if result == 0: result = cmp(a.noteId, b.noteId))
+proc isOrdered(hits: seq[SearchHit]): bool =
+  ## The order `ranked` promises: rank descending, then most recently updated,
+  ## then note id. A scan, so the postcondition stays cheaper than the sort it
+  ## checks and never re-derives it by ranking again.
+  for i in 1 ..< hits.len:
+    let previous = hits[i - 1]
+    let current = hits[i]
+    if previous.rank < current.rank: return false
+    if previous.rank == current.rank:
+      if previous.updated < current.updated: return false
+      if previous.updated == current.updated and previous.noteId >
+          current.noteId:
+        return false
+  true
+
+proc ranked*(hits: seq[SearchHit]; today = now().format("yyyy-MM-dd")): seq[SearchHit]
+    {.contractual.} =
+  ## Drop what a model must not be given, score what is left, and order it.
+  ## `rank` is derived here from authority and status: whatever the caller put
+  ## in that field is overwritten.
+  ensure:
+    result.len <= hits.len
+    result.isOrdered
+  body:
+    for candidate in hits:
+      if candidate.allowed:
+        var hit = candidate
+        hit.rank = authorityWeight(hit.authority) + statusWeight(hit.status)
+        hit.stale = isStale(hit.reviewAfter, today)
+        if hit.stale: hit.rank -= 20
+        result.add(hit)
+    result.sort(proc(a, b: SearchHit): int =
+      result = cmp(b.rank, a.rank)
+      if result == 0: result = cmp(b.updated, a.updated)
+      if result == 0: result = cmp(a.noteId, b.noteId))
 
 proc buildContextPacket*(query: string; hits: seq[SearchHit]; budgetTokens: int;
     today = now().format("yyyy-MM-dd"); git = GitState();
