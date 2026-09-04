@@ -1,51 +1,117 @@
 # UniContext
 
 UniContext compiles readable, version-controlled knowledge sources into short, sourced context
-packets that can be reused by multiple agents.
+packets. Markdown notes and their Git history are canonical; the SQLite index is derived and can
+be deleted and rebuilt at any time.
 
-Milestones K0 and K1 provide an end-to-end path: Markdown notes with flat YAML frontmatter,
-section-aware parsing, a rebuildable SQLite FTS5 index, authority ranking, and budgeted context
-packets. K2 exposes this path through an MCP stdio server.
+It does not depend on a model, an agent, or a note-taking application.
 
-```sh
-nimble build
-./unicontext index --manifest ../../knowledge-core/unicontext.toml
-./unicontext context --manifest ../../knowledge-core/unicontext.toml \
-  --query "memory authority" --budget 4000 --repository /path/to/worktree
-./unicontext serve --manifest ../../knowledge-core/unicontext.toml
+## Surfaces
+
+- **Nim library** — `import UniContext`.
+- **Command** — `unicontext index | search | context | status | serve`.
+- **MCP server** — `unicontext serve` speaks JSON-RPC over stdio.
+- **C ABI** — `libUniContext.a` / `.so` / `.dylib` and `include/UniContext.h`.
+- **Python** — `pip install lituus-unicontext`, a Cython binding over the C ABI.
+
+## Module map
+
+| Layer | What it holds |
+|---|---|
+| `domain` | the types every other layer speaks in |
+| `workspace` | the manifest of allowed roots, and bounded live Git state |
+| `text` | flat YAML frontmatter and section-aware Markdown parsing |
+| `database` | schema, migrations and FTS5 queries over UniDatabase |
+| `context` | ranking, freshness, budgeting and packet rendering |
+| `memory` | append-only proposals and session events |
+| `index` | root traversal, validation and index reconstruction |
+| `protocol` | the MCP tool definitions and handlers, over UniMCP |
+
+The order is enforced, not documented: `vgraph.cfg` lists it and `nimble checkVGraph` fails an
+import that climbs it.
+
+## Uni-family relationship
+
+- [UniMCP](https://github.com/lituus-lab/UniMCP) supplies the JSON-RPC and MCP lifecycle.
+- [UniDatabase](https://github.com/lituus-lab/UniDatabase) supplies the SQLite lifecycle.
+
+Neither depends on UniContext, and each reaches it through exactly one module, which `vgraph.cfg`
+records and the gate enforces.
+
+## Nim example
+
+```nim
+import UniContext
+
+let hits = @[
+  SearchHit(noteId: "decision.storage", path: "decision.storage.md",
+    heading: "Storage", content: "Markdown is canonical; the index is derived.",
+    status: "accepted", authority: "maintainer", updated: "2026-07-15"),
+  SearchHit(noteId: "draft.retrieval", path: "draft.retrieval.md",
+    heading: "Retrieval", content: "Half-written.",
+    status: "draft", authority: "maintainer", updated: "2026-07-15")]
+
+# The draft is filtered out, and `rank` is derived from authority and status
+# rather than read from the hit.
+let packet = buildContextPacket("how is context assembled?", hits, 1024)
+echo packet.sources.len          # 1
+echo packet.sources[0].noteId    # decision.storage
+echo packet.estimatedTokens <= packet.budgetTokens  # true
 ```
 
-The project remains private during its initial release. It does not depend on Obsidian, a model,
-or an agent. SQLite is a derived index; Markdown files remain the source of truth. Its generic
-JSON-RPC and MCP lifecycle is supplied by the sibling UniMCP library, and its SQLite lifecycle is
-supplied by the sibling UniDatabase library, both through local Nim paths.
+`examples/demo.nim` runs the same path with a stale memory and a budget too small for every hit.
 
-See [docs/architecture.md](docs/architecture.md) for data flow, invariants, security boundaries,
-and extraction gates. See [docs/validation.md](docs/validation.md) for current gate evidence and
-known limitations. See [docs/extraction-assessment.md](docs/extraction-assessment.md) for the
-evidence-based UniMCP, UniDatabase, and UniText boundaries.
-The evidence used to admit the private UniText prototype and its remaining gates is defined in
-[docs/unitext-entry-gate.md](docs/unitext-entry-gate.md).
+## Command
 
-## Current MCP tools
+```sh
+nimble cli
+./build/unicontext index   --manifest /absolute/path/to/unicontext.toml
+./build/unicontext context --manifest /absolute/path/to/unicontext.toml \
+  --query "memory authority" --budget 4000 --repository /path/to/worktree
+./build/unicontext serve   --manifest /absolute/path/to/unicontext.toml
+```
 
-- `memory_search`: FTS5 search with metadata and provenance;
-- `memory_get`: read a note by stable identifier;
-- `memory_context`: compile a ranked and budgeted context packet;
-- `memory_propose`: add a non-canonical proposal;
-- `session_start`, `session_update`, and `session_close`: append immutable Markdown events.
+See [docs/integration.md](docs/integration.md) for the MCP client declaration and the clients it
+has been checked against, and [docs/architecture.md](docs/architecture.md) for data flow,
+invariants and security boundaries.
 
-Read tools are declared non-destructive and idempotent. Write tools never replace an existing
-file and cannot write canonical memory directly.
+## MCP tools
 
-`memory_context` accepts an optional `repository` path. UniContext invokes `git` directly with a
-fixed read-only command set and adds the worktree root, branch, commit, short status, and bounded
-unstaged diff before stored memory. Live Git output receives at most half of the packet budget.
+- `memory_search` — FTS5 search with metadata and provenance;
+- `memory_get` — read a note by stable identifier;
+- `memory_context` — compile a ranked, budgeted context packet;
+- `memory_propose` — add a non-canonical proposal;
+- `session_start`, `session_update`, `session_close` — append immutable Markdown events.
 
-## Current non-goals
+Read tools are declared non-destructive and idempotent. Write tools never replace an existing file
+and cannot write canonical memory directly.
+
+`memory_context` accepts an optional `repository` path. UniContext then invokes `git` with a fixed
+read-only command set and adds the worktree root, branch, commit, short status and a bounded
+unstaged diff. Live Git output receives at most half the packet budget. A caller should not pass a
+private worktree to a remote model unless sharing its status and diff is acceptable.
+
+## Non-goals
 
 - direct canonical-memory writes by an agent;
 - embeddings or neural reranking;
-- a graphical interface or a replacement for Maki, Crush, Claude Code, or Codex;
-- repointing UniContext to UniText without an approved, fixture-backed migration;
-- modification of existing UniMCP or UniDatabase consumers during the private prototype.
+- a graphical interface.
+
+## Gates
+
+```sh
+nimble testAll     # Nim debug + release + C ABI
+nimble pyTest      # Cython extension + pytest
+nimble ctest       # the C header linked against the built library
+nimble lint        # nimpretty
+nimble checkVGraph # layer directions and engine confinement
+nimble coverage    # gcov + lcov
+nimble docs        # nimib book + API reference into pages/
+```
+
+Every task runs through `tools/gate.nim`: nimble exits 0 on a task whose `exec` failed, so its
+exit code proves nothing and the task's own success marker is what the gate reads.
+
+## Licence
+
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
