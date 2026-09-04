@@ -1,12 +1,13 @@
 ## SPDX-License-Identifier: Apache-2.0
 import std/[json, os, strformat, strutils]
+import UniContext
 import UniContext/[context/builder, database/store, index/indexer]
 import UniContext/protocol/mcp_server
 import UniContext/workspace/[git_state, manifest]
 
 proc usage() =
-  echo """UniContext prototype 0.1.0
-usage:
+  echo "UniContext " & UniContextVersion
+  echo """usage:
   unicontext index  --root PATH --db PATH
   unicontext index  --manifest PATH
   unicontext search --db PATH --query TEXT [--limit N]
