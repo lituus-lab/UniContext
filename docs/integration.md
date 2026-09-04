@@ -23,7 +23,7 @@ Clients that accept command-based MCP servers can adapt this entry:
   "mcpServers": {
     "unicontext": {
       "command": "/absolute/path/to/unicontext",
-      "args": ["serve", "--manifest", "~/Knowledge/knowledge-core/unicontext.toml"]
+      "args": ["serve", "--manifest", "/absolute/path/to/unicontext.toml"]
     }
   }
 }
