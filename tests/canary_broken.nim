@@ -6,4 +6,4 @@
 ## anything -- which is why the proof is a test and not a comment.
 import UniContext
 
-echo fibonacci(theCanaryIsSupposedToBeUndefined)
+echo buildContextPacket(theCanaryIsSupposedToBeUndefined)
