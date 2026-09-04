@@ -1,23 +1,16 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright 2026 lituus-lab
-"""unicontext — Python binding over the UniContext C library."""
-from ._core import fibonacci as _fib_c, version as _version_c, FIB_MAX_N
+## SPDX-License-Identifier: Apache-2.0
+"""Small ctypes binding for the UniContext C ABI."""
+from ctypes import CDLL, c_int
+from pathlib import Path
+import sys
 
-__version__ = _version_c().decode("ascii")
+_name = "libUniContext.dylib" if sys.platform == "darwin" else "libUniContext.so"
+_library = CDLL(str(Path(__file__).with_name(_name)))
+_library.unicontext_valid_budget.argtypes = [c_int]
+_library.unicontext_valid_budget.restype = c_int
 
+def version() -> str:
+    return "1.0.0"
 
-def fibonacci(n):
-    """fib(n) as int. n in [0, FIB_MAX_N]; raises ValueError/TypeError outside."""
-    if not isinstance(n, int):
-        raise TypeError(f"n must be int, got {type(n).__name__}")
-    if not 0 <= n <= FIB_MAX_N:
-        raise ValueError(f"n must be in [0, {FIB_MAX_N}], got {n}")
-    return _fib_c(n)
-
-
-def version():
-    """C library version string."""
-    return _version_c().decode("ascii")
-
-
-__all__ = ["fibonacci", "version", "FIB_MAX_N", "__version__"]
+def valid_budget(tokens: int) -> bool:
+    return bool(_library.unicontext_valid_budget(tokens))

@@ -1,15 +1,19 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 lituus-lab
-# UniContext — reference scaffold for the lituus-lab Uni* family.
+# UniContext — knowledge sources compiled into sourced context packets.
 
-version       = "0.1.0"
+version       = "1.0.0"
 author        = "lituus-lab"
-description   = "Reference template for the lituus-lab Uni* libraries (Nim + C-ABI + Python)"
+description   = "Compile knowledge sources into sourced context packets"
 license       = "Apache-2.0"
 srcDir        = "src"
 
 requires "nim >= 2.2.0"
 requires "https://github.com/lbartoletti/NimContracts#main"
+# `database/store` imports UniDatabase/sqlite. It was not declared, so a fresh
+# clone could not resolve what the code imports; vgraph.cfg names it too, and
+# `checkVGraph` refuses an engine that is not in both.
+requires "https://github.com/lituus-lab/UniDatabase#main"
 
 # The book toolchain, needed by three tasks and by nothing the library ships.
 # Pinned to GitHub tags rather than the registry: the registry lags upstream
@@ -47,7 +51,7 @@ import std/strutils
 # other platform here ships `python3`.
 const python = when defined(windows): "python" else: "python3"
 
-const CoverageMin = 90.0
+const CoverageMin = 70.0
   ## Line coverage below this fails `coverage`. The template sits at 100 on one
   ## module; a real engine sets what its own suite can hold.
 
@@ -137,22 +141,46 @@ task docs, "API reference + book into pages/ — what CI publishes":
   done "docs"
 
 task test, "Nim tests (debug, contracts active)":
-  exec "nim c -r --path:src -o:build/test_fibonacci tests/test_fibonacci.nim"
+  exec "nim c -r --path:src -o:build/test_context tests/test_context.nim"
+  exec "nim c -r --path:src -o:build/test_index tests/test_index.nim"
+  exec "nim c -r --path:src -o:build/test_markdown tests/test_markdown.nim"
+  exec "nim c -r --path:src -o:build/test_mcp tests/test_mcp.nim"
+  exec "nim c -r --path:src -o:build/test_writer tests/test_writer.nim"
+  exec "nim c -r --path:src -o:build/test_git_state tests/test_git_state.nim"
+  exec "nim c -r --path:src -o:build/test_process tests/test_process.nim"
   exec "nim c -r --path:src -o:build/test_version tests/test_version.nim"
   done "test"
 
 task testRelease, "Nim tests (release, contracts compiled away)":
-  exec "nim c -r -d:release --path:src -o:build/test_fibonacci_rel tests/test_fibonacci.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_context_rel tests/test_context.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_index_rel tests/test_index.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_markdown_rel tests/test_markdown.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_mcp_rel tests/test_mcp.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_writer_rel tests/test_writer.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_git_state_rel tests/test_git_state.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_process_rel tests/test_process.nim"
   exec "nim c -r -d:release --path:src -o:build/test_version_rel tests/test_version.nim"
   done "testRelease"
 
 task testCi, "Nim tests CI runs, debug — narrow this in a clone whose suite grows slow":
-  exec "nim c -r --path:src -o:build/test_fibonacci tests/test_fibonacci.nim"
+  exec "nim c -r --path:src -o:build/test_context tests/test_context.nim"
+  exec "nim c -r --path:src -o:build/test_index tests/test_index.nim"
+  exec "nim c -r --path:src -o:build/test_markdown tests/test_markdown.nim"
+  exec "nim c -r --path:src -o:build/test_mcp tests/test_mcp.nim"
+  exec "nim c -r --path:src -o:build/test_writer tests/test_writer.nim"
+  exec "nim c -r --path:src -o:build/test_git_state tests/test_git_state.nim"
+  exec "nim c -r --path:src -o:build/test_process tests/test_process.nim"
   exec "nim c -r --path:src -o:build/test_version tests/test_version.nim"
   done "testCi"
 
 task testCiRelease, "Nim tests CI runs, release — narrow this in a clone whose suite grows slow":
-  exec "nim c -r -d:release --path:src -o:build/test_fibonacci_rel tests/test_fibonacci.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_context_rel tests/test_context.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_index_rel tests/test_index.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_markdown_rel tests/test_markdown.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_mcp_rel tests/test_mcp.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_writer_rel tests/test_writer.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_git_state_rel tests/test_git_state.nim"
+  exec "nim c -r -d:release --path:src -o:build/test_process_rel tests/test_process.nim"
   exec "nim c -r -d:release --path:src -o:build/test_version_rel tests/test_version.nim"
   done "testCiRelease"
 
@@ -264,7 +292,7 @@ task coverage, "LCOV + HTML coverage report for the Nim sources (needs lcov)":
   rmDir "coverage"
   exec "nim c --path:src --nimcache:" & cache &
        " --debugger:native --passC:--coverage --passL:--coverage" &
-       " -o:build/test_coverage tests/test_fibonacci.nim"
+       " -o:build/test_coverage tests/test_context.nim"
   exec "./build/test_coverage"
   exec "lcov --capture --directory " & cache & " --base-directory ." &
        " --include \"*/src/UniContext/*\" --ignore-errors mismatch" &

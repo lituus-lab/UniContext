@@ -1,135 +1,51 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-<!-- Copyright 2026 lituus-lab -->
 # UniContext
 
-GitHub template repository for the `lituus-lab` `Uni*` libraries. Press **Use
-this template** and a new engine starts with the layout, the gates and the CI
-already in place. Hello-world: `fibonacci`, in Nim, C ABI, and Python.
+UniContext compiles readable, version-controlled knowledge sources into short, sourced context
+packets that can be reused by multiple agents.
 
-**Status: incubating.** The layout, the gates and the CI are in use across the
-family and are not expected to move much. The `0.x` C ABI is not frozen, and
-this repo is a starting point rather than a dependency: nothing should require
-it.
+Milestones K0 and K1 provide an end-to-end path: Markdown notes with flat YAML frontmatter,
+section-aware parsing, a rebuildable SQLite FTS5 index, authority ranking, and budgeted context
+packets. K2 exposes this path through an MCP stdio server.
 
-## Layout
-
-```text
-src/UniContext.nim          umbrella module
-src/UniContext/fibonacci.nim  Nim core (NimContracts)
-src/UniContext/c_api.nim    C ABI
-include/UniContext.h        hand-written C header
-tests/test_fibonacci.nim     Nim tests
-tests/c/                     C ABI test (links the header against the lib)
-examples/                    Nim + C demos
-py/                          Cython binding + pytest
-ADRs/                        0001 DAG, 0002 license, 0003 engine&shell, 0004 conventions
-tools/gate.nim               the failure gate (see "Running a task")
-tools/lint.nim tools/vgraph.nim  nimpretty check, layer check
-tests/canary_broken.nim      does not compile, on purpose
-tests/test_version.nim       the version's six copies must agree
-.github/workflows/ci.yml     3-OS Nim matrix + C ABI + Python + all-green
-CHANGELOG.md CITATION.cff CODE_OF_CONDUCT.md .editorconfig
+```sh
+nimble build
+./unicontext index --manifest ../../knowledge-core/unicontext.toml
+./unicontext context --manifest ../../knowledge-core/unicontext.toml \
+  --query "memory authority" --budget 4000 --repository /path/to/worktree
+./unicontext serve --manifest ../../knowledge-core/unicontext.toml
 ```
 
-## Build
+The project remains private during its initial release. It does not depend on Obsidian, a model,
+or an agent. SQLite is a derived index; Markdown files remain the source of truth. Its generic
+JSON-RPC and MCP lifecycle is supplied by the sibling UniMCP library, and its SQLite lifecycle is
+supplied by the sibling UniDatabase library, both through local Nim paths.
 
-```bash
-nimble install -y
-nim c --hints:off -o:build/unigate tools/gate.nim   # the failure gate, once
+See [docs/architecture.md](docs/architecture.md) for data flow, invariants, security boundaries,
+and extraction gates. See [docs/validation.md](docs/validation.md) for current gate evidence and
+known limitations. See [docs/extraction-assessment.md](docs/extraction-assessment.md) for the
+evidence-based UniMCP, UniDatabase, and UniText boundaries.
+The evidence used to admit the private UniText prototype and its remaining gates is defined in
+[docs/unitext-entry-gate.md](docs/unitext-entry-gate.md).
 
-build/unigate test    # Nim, debug (contracts active), see below
-build/unigate testRelease    # Nim, release (contracts compiled away)
-build/unigate testAll        # debug + release + C ABI
-build/unigate ctest          # C ABI: static lib + tests/c
-build/unigate cexample       # C demo
-build/unigate example        # Nim demo
-build/unigate pyTest         # Cython + pytest
-build/unigate coverage       # gcov + lcov -> coverage/
-build/unigate book           # nimib book -> book/index.html
-build/unigate docs           # book + API reference -> pages/
-build/unigate canary         # must fail: proves the gate still works
-```
+## Current MCP tools
 
-## Running a task
+- `memory_search`: FTS5 search with metadata and provenance;
+- `memory_get`: read a note by stable identifier;
+- `memory_context`: compile a ranked and budgeted context packet;
+- `memory_propose`: add a non-canonical proposal;
+- `session_start`, `session_update`, and `session_close`: append immutable Markdown events.
 
-Nimble 0.22 exits 0 even when an `exec` inside a task failed: the exception is
-printed, the task stops, and the process still reports success. `nimble test`
-coming back 0 therefore proves only that nimble ran. Every task here ends by
-writing its own success marker, and `tools/gate.nim` is what turns a missing
-marker into a non-zero exit.
+Read tools are declared non-destructive and idempotent. Write tools never replace an existing
+file and cannot write canonical memory directly.
 
-Run tasks through `build/unigate`, never bare, wherever the answer matters.
-`build/unigate canary` compiles a source that cannot compile and must come back
-non-zero; a CI job checks exactly that, because a gate nobody tests is a gate
-nobody can trust.
+`memory_context` accepts an optional `repository` path. UniContext invokes `git` directly with a
+fixed read-only command set and adds the worktree root, branch, commit, short status, and bounded
+unstaged diff before stored memory. Live Git output receives at most half of the packet budget.
 
-## CI
+## Current non-goals
 
-`test`, `cabi` and `python` on ubuntu/macOS/Windows. `consume-cabi` and
-`consume-wheel` rebuild against the published artifacts on a machine without Nim,
-so what ships is what was tested. `coverage` and `docs` run on ubuntu. `canary`
-checks that the gate still rejects a broken build.
-
-`all-green` gathers every job's result and is the single check branch protection
-requires: a job that was skipped or cancelled cannot pass for one that ran.
-
-`dco` blocks PRs missing a `Signed-off-by` trailer; `commitizen` blocks PRs whose
-commits or title are not [Conventional Commits](https://www.conventionalcommits.org/)
-(`CONTRIBUTING.md`).
-
-The same gates run locally with pre-commit: `pip install pre-commit && pre-commit install`
-(`CONTRIBUTING.md`).
-
-`pages` deploys the built docs, and is opt-in through the `PUBLISH_PAGES`
-repository variable. It is off by default: across the family today every one of
-these deployments reports success while every site answers 404, and a job that
-is red forever teaches everyone to ignore red.
-
-## After "Use this template"
-
-Rename the tokens, then replace `fibonacci.nim` with the domain module(s).
-
-| Template | New engine | Example |
-|---|---|---|
-| `UniContext` | `UniFoo` | `UniAccurate`, `UniMath` |
-| `unicontext` | `unifoo` | `uniaccurate`, `unimath` |
-| `libUniContext` | `libUniFoo` | `libUniAccurate` |
-| `UniContext.h` | `UniFoo.h` | `UniAccurate.h` |
-| `lituus-unicontext` | `lituus-unifoo` | `lituus-uniaccurate` |
-
-The C symbol prefix is the library's own name in lower case —
-`unicontext_fibonacci`, so `unifoo_*`. Short prefixes read better and collide:
-a binary that links several engines at once holds them all in one namespace.
-
-Files to rename: `UniContext.nimble`, `src/UniContext.nim`, `src/UniContext/`,
-`include/UniContext.h`, `tests/c/test_unicontext.c` (+ its Makefile target),
-`py/unicontext/`. Then update `LICENSE`/`NOTICE` copyright and the ADR titles.
-
-The PyPI distribution is `lituus-<module>`; the import name stays `<module>`.
-Distribution and import are separate decisions, and the bare names are not all
-available.
-
-## AI-assisted contributions
-
-Assistance from AI/LLM tools is welcome on the same terms as any other
-contribution.
-
-- **Accountability.** The human contributor is the author and remains fully
-  responsible for the change. The DCO sign-off (`Signed-off-by`) is the mechanism:
-  by signing you certify the content is yours or properly licensed — this covers
-  AI-assisted work, provided you can stand behind it.
-- **No third-party contamination.** Ensure AI output introduces no code from a
-  third party without a compatible license and attribution. If an LLM reproduced
-  protected material, do not submit it.
-- **Correctness is yours.** The gates (tests, `nimble lint`, conventional commits,
-  pre-commit) catch a lot, but you own the result — review and verify what you
-  commit.
-- **Atomic commits.** Each commit is one logical change. A PR may stack
-  several atomic commits (one per element, say) — one monolithic big-bang
-  commit is not.
-- **Disclosure.** State in the PR whether AI assistance was used (see the PR
-  template). It is not a hard requirement — the DCO remains the gate.
-
-## License
-
-Apache-2.0 (`LICENSE`). DCO sign-off on every commit (`CONTRIBUTING.md`).
+- direct canonical-memory writes by an agent;
+- embeddings or neural reranking;
+- a graphical interface or a replacement for Maki, Crush, Claude Code, or Codex;
+- repointing UniContext to UniText without an approved, fixture-backed migration;
+- modification of existing UniMCP or UniDatabase consumers during the private prototype.

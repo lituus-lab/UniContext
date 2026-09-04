@@ -20,7 +20,7 @@ Commits without a `Signed-off-by` trailer are not accepted.
 
 Commit subjects and the PR title follow [Conventional Commits 1.0](https://www.conventionalcommits.org/):
 
-```text
+```
 <type>(scope)!: <description>
 ```
 
@@ -28,10 +28,10 @@ Commit subjects and the PR title follow [Conventional Commits 1.0](https://www.c
 `build`, `ci`, `chore`, `revert`, `bump`. `scope` and `!` (breaking change) are
 optional. A space separates the colon from the description.
 
-```text
-feat(c_api): expose the domain bound to C callers
-fix(c_api): clamp a negative index instead of raising
-docs: say which platforms the C ABI is tested on
+```
+feat: add naiveSum C ABI
+fix(c_api): clamp negative index instead of raising
+docs: clarify the C ABI error contract
 feat(core)!: drop the old accumulator API
 ```
 
@@ -42,13 +42,8 @@ whole PR into one commit whose subject is the title.
 ## Workflow
 
 1. Branch from `main`, one logical change per commit.
-2. Pass the gates: `build/unigate testAll`, `build/unigate pyTest`. Through
-   `build/unigate`, not `nimble` — nimble exits 0 even when a task failed, so
-   a bare run tells you nothing. Build it once with
-   `nim c --hints:off -o:build/unigate tools/gate.nim`.
-3. Open a PR. CI runs Nim, the C ABI and Python on ubuntu/macOS/Windows, plus
-   lint, docs, coverage, and a canary that must fail. `all-green` is the check
-   that has to be green.
+2. Pass the gates: `nimble testAll`, `nimble pyTest`.
+3. Open a PR; CI runs the 3-OS Nim matrix + C ABI + Python.
 
 ## Pre-commit
 
@@ -61,18 +56,13 @@ pre-commit install
 
 `pre-commit install` sets up the pre-commit, pre-push and commit-msg hooks at
 once. Hooks: hygiene (trailing whitespace, EOF, yaml/toml, large files),
-`lint` on `*.nim`, `checkVGraph` before push, Conventional Commits via
-`cz check` on the commit message, and a DCO sign-off check. The two nimble
-tasks go through `tools/hooks/gated.sh`, for the reason above. Run everything
+`nimble lint` on `*.nim`, `nimble checkVGraph` before push, Conventional Commits
+via `cz check` on the commit message, and a DCO sign-off check. Run everything
 manually:
 
 ```bash
 pre-commit run --all-files
 ```
-
-## Conduct
-
-See `CODE_OF_CONDUCT.md`. Report a problem privately to the maintainer.
 
 ## Conventions
 
