@@ -1,6 +1,6 @@
 ## SPDX-License-Identifier: Apache-2.0
 import std/[json, os, strformat, strutils]
-import UniContext
+import UniContext/version
 import UniContext/[context/builder, database/store, index/indexer]
 import UniContext/protocol/mcp_server
 import UniContext/workspace/[git_state, manifest]
