@@ -65,7 +65,8 @@ proc collectGitState*(repository: string;
           result.truncated)
     let staged = runGit(absolute,
       ["diff", "--cached", "--no-ext-diff", "--unified=1", "--"], outputLimit)
-    let unstaged = runGit(absolute, ["diff", "--no-ext-diff", "--unified=1", "--"], outputLimit)
+    let unstaged = runGit(absolute, ["diff", "--no-ext-diff", "--unified=1",
+        "--"], outputLimit)
     var combinedDiff: string
     if staged.code == 0 and staged.output.len > 0:
       combinedDiff.add("# Staged changes\n" & staged.output)
