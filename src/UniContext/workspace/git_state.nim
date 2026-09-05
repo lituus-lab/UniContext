@@ -5,12 +5,28 @@ import UniContext/domain/types
 const
   DefaultGitOutputLimit* = 12_000
 
-proc runGit(repository: string; arguments: openArray[string]): tuple[
-    output: string; code: int] =
+proc runGit(repository: string; arguments: openArray[string];
+    limit = DefaultGitOutputLimit): tuple[output: string; code: int] =
+  ## At most `limit + 1` bytes are kept. The rest is read and discarded rather
+  ## than left in the pipe: `readAll` on a repository whose diff is a gigabyte
+  ## put the whole gigabyte in memory before `bounded` trimmed it, and simply
+  ## stopping the read would block git on a full pipe instead.
+  ##
+  ## One byte past the limit, not exactly the limit: `bounded` decides that
+  ## output was truncated by comparing against the same number, and a value cut
+  ## to exactly it would be reported as complete.
   var process = startProcess("git", workingDir = repository, args = @arguments,
     options = {poUsePath, poStdErrToStdOut})
   defer: process.close()
-  result.output = process.outputStream.readAll.strip
+  let stream = process.outputStream
+  var chunk = newString(4096)
+  while true:
+    let read = stream.readData(addr chunk[0], chunk.len)
+    if read <= 0: break
+    if result.output.len <= limit:
+      let keep = min(read, limit + 1 - result.output.len)
+      result.output.add(chunk[0 ..< keep])
+  result.output = result.output.strip
   result.code = process.waitForExit()
 
 proc bounded(value: string; limit: int; truncated: var bool): string =
@@ -48,8 +64,8 @@ proc collectGitState*(repository: string;
       result.status = bounded(status.output, outputLimit div 3,
           result.truncated)
     let staged = runGit(absolute,
-      ["diff", "--cached", "--no-ext-diff", "--unified=1", "--"])
-    let unstaged = runGit(absolute, ["diff", "--no-ext-diff", "--unified=1", "--"])
+      ["diff", "--cached", "--no-ext-diff", "--unified=1", "--"], outputLimit)
+    let unstaged = runGit(absolute, ["diff", "--no-ext-diff", "--unified=1", "--"], outputLimit)
     var combinedDiff: string
     if staged.code == 0 and staged.output.len > 0:
       combinedDiff.add("# Staged changes\n" & staged.output)
