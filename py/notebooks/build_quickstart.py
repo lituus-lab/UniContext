@@ -24,51 +24,58 @@ self-contained wheel: the native library travels inside the package, so
 installing it needs neither Nim nor a compiler.
 
 ```
-pip install unicontext
+pip install lituus-unicontext
 ```
 
 CI executes this notebook against the wheel the release actually publishes, so
 an output below that stops matching fails the build."""),
-    ("md", "## The API"),
+    ("md", """## What the binding covers
+
+Deliberately little. A context packet is a document, not a struct: marshalling
+one across a C boundary would mean an ownership convention for every string in
+it, so packets cross that boundary as JSON through the MCP server instead
+(`unicontext serve`). What the ABI does expose is what a caller needs *before*
+asking for a packet."""),
     ("code", """import unicontext
 
-unicontext.version(), unicontext.__version__"""),
-    ("md", "`fibonacci` is the template's hello-world, iterative and O(n)."),
-    ("code", "[unicontext.fibonacci(n) for n in range(11)]"),
-    ("md", """## The domain is part of the contract
+unicontext.version(), unicontext.__version__, unicontext.abi_version()"""),
+    ("md", """`__version__` is not a second copy of the version: it is read from
+the linked library at import, so it cannot disagree with what is installed.
 
-`fibonacci` is defined on `[0, 92]` — 92 being the largest argument whose result
-still fits in a signed 64-bit integer. The bound is not advisory."""),
-    ("code", "unicontext.fibonacci(92)"),
-    ("md", """Past it the binding raises, rather than returning a silently wrong
-number. This is the contract the Nim library states as a precondition; each
-surface expresses it in the terms its own callers expect."""),
-    ("code", """try:
-    unicontext.fibonacci(93)
-except ValueError as exc:
-    print("ValueError:", exc)"""),
-    ("code", """try:
-    unicontext.fibonacci(-1)
-except ValueError as exc:
-    print("ValueError:", exc)"""),
-    ("md", "A non-integer argument is a type error, not a coercion."),
-    ("code", """try:
-    unicontext.fibonacci(10.0)
-except TypeError as exc:
-    print("TypeError:", exc)"""),
-    ("md", """## The C ABI underneath
+## The budget bounds
 
-The same entry points are reachable from anything that speaks C. There the
-contract is expressed by clamping instead of raising — an exception must never
-unwind across an ABI boundary:
+A packet is compiled to a token budget. The accepted range is part of the
+contract, and the binding reads it from `UniContext.h` rather than restating
+it."""),
+    ("code", "unicontext.BUDGET_MIN, unicontext.BUDGET_MAX"),
+    ("md", """`valid_budget` answers for any integer. It does not raise: the C
+ABI never lets an exception unwind across the boundary, and the binding keeps
+that behaviour rather than inventing an error Python callers would have to
+catch."""),
+    ("code", """for tokens in [0, unicontext.BUDGET_MIN - 1, unicontext.BUDGET_MIN,
+               4096, unicontext.BUDGET_MAX, unicontext.BUDGET_MAX + 1]:
+    print(f"{tokens:>6}  {unicontext.valid_budget(tokens)}")"""),
+    ("md", """Screening a budget before the call is the point: a value this
+rejects is one `memory_context` would refuse over MCP, and finding that out
+locally costs nothing."""),
+    ("code", """requested = 64
+budget = min(max(requested, unicontext.BUDGET_MIN), unicontext.BUDGET_MAX)
+print(f"asked for {requested}, will ask the server for {budget}")
+print("valid:", unicontext.valid_budget(budget))"""),
+    ("md", """## Where the rest lives
 
-```c
-unicontext_fibonacci(-5);   /* 0       — clamped */
-unicontext_fibonacci(200);  /* fib(92) — clamped */
+The library itself — indexing, ranking, budgeting, the MCP tools — is Nim, and
+the command is the shortest way to it:
+
+```
+unicontext index   --manifest /absolute/path/to/unicontext.toml
+unicontext serve   --manifest /absolute/path/to/unicontext.toml
 ```
 
-See `include/UniContext.h`, and the book for the full picture."""),
+See `include/UniContext.h` for the C surface, and the book for the full
+picture."""),
 ]
+
 
 
 def main():

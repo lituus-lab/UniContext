@@ -145,7 +145,7 @@ task docs, "API reference + book into pages/ — what CI publishes":
   # the absolute path of the machine that built it. It does not get published.
   rmFile "pages/book.json"
   # The generated reference sits beside the book, not inside it.
-  exec "nim doc --index:on --outdir:pages/api --project --hints:off src/UniContext.nim"
+  exec "nim doc --index:on --outdir:pages/api --project --hints:off --path:src src/UniContext.nim"
   # ...and wears the same theme. `nim doc` has no stylesheet option, so the
   # palette is appended to the one it just wrote. Left alone, that reference
   # ships six tokens below their contrast bar.

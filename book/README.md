@@ -12,7 +12,8 @@ the build rather than quietly misleading a reader.
 | `nimib.toml` | nimib's own configuration, read from this directory |
 | `config.nims` | the paths each chapter's own compilation needs |
 | `index.nim` | the opening chapter |
-| `fibonacci.nim`, `contracts.nim`, `surfaces.nim` | the chapters |
+| `surfaces_demo.c` | compiled and run by the Surfaces chapter |
+| `ranking.nim`, `budget.nim`, `surfaces.nim` | the chapters |
 
 ## Building it
 
