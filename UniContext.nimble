@@ -309,6 +309,8 @@ task coverage, "LCOV + HTML coverage report for the Nim sources (needs lcov)":
   # It concerns a compiler-generated symbol, not a line of this library.
   # `range` and `unmapped` stay fatal: those would mean the capture no longer
   # matches the sources, which is the failure this task exists to surface.
+  # `test_process` drives the real binary, exactly as the suites do.
+  buildCli()
   let cache = "build/covcache"
   rmDir cache
   rmDir "coverage"

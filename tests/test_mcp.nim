@@ -140,6 +140,10 @@ visibility = "private"
       "arguments": {"id": "proposal.mcp.fixture", "title": "Fixture proposal",
         "summary": "The proposal remains non-canonical.", "evidence": [
             "test_mcp:pass"]}}))
+    # The message, not just the flag: a failure here on another platform has to
+    # say why without a second CI run to find out.
+    if proposed["result"]["isError"].getBool:
+      echo "memory_propose failed: ", proposed["result"]["content"]
     check proposed["result"]["isError"].getBool == false
     let proposalPath = base / "inbox" / "agent-proposals" / "proposal.mcp.fixture.md"
     check fileExists(proposalPath)
