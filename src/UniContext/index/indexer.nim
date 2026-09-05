@@ -35,20 +35,27 @@ proc visibilityLevel(value: string): int =
   of "public": 2
   else: -1
 
+const MaxNoteBytes = 4 * 1024 * 1024
+  ## Largest Markdown note the index will read. Checked against the file's
+  ## size, not the string that was read: checking afterwards means the 4 GiB
+  ## file is already in memory by the time it is refused.
+
+proc readNote(path: string): string =
+  if getFileSize(path) > MaxNoteBytes:
+    raise newException(IOError, path & ": Markdown note exceeds 4 MiB")
+  readFile(path)
+
 proc addRoot(root, rootName, rootVisibility: string; database: Store;
     report: var IndexReport; seenIds: var HashSet[string];
         fingerprint: var uint64) =
   if not dirExists(root):
     raise newException(IOError, "missing root: " & root)
-  const maxNoteBytes = 4 * 1024 * 1024
   const maxNotesPerRoot = 100_000
   let paths = markdownFiles(root)
   if paths.len > maxNotesPerRoot:
     raise newException(IOError, "root contains too many Markdown files")
   for path in paths:
-    let content = readFile(path)
-    if content.len > maxNoteBytes:
-      raise newException(IOError, path & ": Markdown note exceeds 4 MiB")
+    let content = readNote(path)
     fingerprint.mix(rootName)
     fingerprint.mix(rootVisibility)
     fingerprint.mix(path)
@@ -109,7 +116,7 @@ proc corpusFingerprint*(manifest: Manifest): string =
       fingerprint.mix(root.name)
       fingerprint.mix(root.visibility)
       fingerprint.mix(path)
-      fingerprint.mix(readFile(path))
+      fingerprint.mix(readNote(path))
   result = fingerprint.fingerprintValue
 
 proc indexIsFresh*(manifest: Manifest): bool =
