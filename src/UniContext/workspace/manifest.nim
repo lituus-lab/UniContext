@@ -20,8 +20,15 @@ proc scalar(value: string): string =
 
 proc resolved(value, base: string): string =
   let expanded = value.expandTilde
-  if expanded.isAbsolute: expanded.normalizedPath
-  else: absolutePath(expanded, base).normalizedPath
+  result =
+    if expanded.isAbsolute: expanded.normalizedPath
+    else: absolutePath(expanded, base).normalizedPath
+  # Canonicalised once it exists, because `canonicalForCreation` canonicalises
+  # the candidate: Windows hands out temporary directories in the 8.3 short
+  # form (`RUNNER~1`) while `expandFilename` returns the long one, and a root
+  # kept in the short form matches no path under it.
+  if result.dirExists or result.fileExists:
+    result = result.expandFilename.normalizedPath
 
 proc pathWithin(candidate, root: string): bool =
   candidate == root or candidate.startsWith(root & DirSep)
