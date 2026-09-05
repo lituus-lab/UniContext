@@ -17,7 +17,6 @@ proc statusWeight(status: string): int =
   case status
   of "accepted": 30
   of "active": 25
-  of "proposed": 5
   else: 0
 
 proc allowed(hit: SearchHit): bool =
@@ -94,7 +93,7 @@ proc buildContextPacket*(query: string; hits: seq[SearchHit]; budgetTokens: int;
     let diffLimit = max(0, gitLimit - result.git.status.len)
     if result.git.diff.len > diffLimit:
       result.git.diff = result.git.diff[0 ..< diffLimit]
-    result.git.diff.add("\n[output truncated by UniContext]")
+      result.git.diff.add("\n[output truncated by UniContext]")
   if result.git.available:
     result.rendered.add("\n## Live repository\n\n")
     result.rendered.add("- root: `" & result.git.root & "`\n")
@@ -109,6 +108,9 @@ proc buildContextPacket*(query: string; hits: seq[SearchHit]; budgetTokens: int;
       result.warnings.add("live Git output was truncated")
   elif result.git.warning.len > 0:
     result.warnings.add(result.git.warning)
+  # Counted, then reported once: a packet that quietly holds less than the
+  # caller's material gives a reader no way to know something was left out.
+  var omitted = 0
   for hit in ranked(hits, today):
     var sectionBlock = &"\n## {hit.noteId} — {hit.heading}\n\n" &
       &"Source: `{hit.path}` · authority: `{hit.authority}` · updated: `{hit.updated}`\n\n" &
@@ -117,6 +119,7 @@ proc buildContextPacket*(query: string; hits: seq[SearchHit]; budgetTokens: int;
       sectionBlock.add("\n> WARNING: memory requires review (review_after " &
         hit.reviewAfter & ")\n")
     if result.rendered.len + sectionBlock.len > maxChars:
+      inc omitted
       continue
     result.rendered.add(sectionBlock)
     result.sources.add(ContextSource(noteId: hit.noteId, path: hit.path,
@@ -125,6 +128,8 @@ proc buildContextPacket*(query: string; hits: seq[SearchHit]; budgetTokens: int;
     if hit.stale:
       result.warnings.add("memory requires review: " & hit.noteId &
           " (review_after " & hit.reviewAfter & ")")
+  if omitted > 0:
+    result.warnings.add($omitted & " source(s) did not fit the token budget")
   result.estimatedTokens = (result.rendered.len + 3) div 4
   if result.sources.len == 0:
     result.warnings.add("no eligible source fits within the budget")

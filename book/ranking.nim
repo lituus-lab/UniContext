@@ -46,7 +46,7 @@ overwritten.
 |---|---|---|---|---|
 | `test` | 100 | | `accepted` | 30 |
 | `code` | 95 | | `active` | 25 |
-| `maintainer` | 90 | | `proposed` | 5 |
+| `maintainer` | 90 | | | |
 | `human` | 75 | | | |
 | `external` | 50 | | | |
 | `agent` | 25 | | | |

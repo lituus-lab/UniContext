@@ -312,10 +312,18 @@ task coverage, "LCOV + HTML coverage report for the Nim sources (needs lcov)":
   let cache = "build/covcache"
   rmDir cache
   rmDir "coverage"
-  exec "nim c --path:src --nimcache:" & cache &
-       " --debugger:native --passC:--coverage --passL:--coverage" &
-       " -o:build/test_coverage tests/test_context.nim"
-  exec "./build/test_coverage"
+  # Every suite, into one cache: measuring a single suite reports the coverage
+  # of that suite, not of the library.
+  # One cache per suite, all under `cache`: sharing a single nimcache makes the
+  # later suites reuse objects compiled for the first, and their runs then
+  # write counters that map to no translation unit -- measured as 0% for a
+  # module its own suite exercises thoroughly.
+  for name in ["test_context", "test_index", "test_markdown", "test_mcp",
+               "test_writer", "test_git_state", "test_process", "test_version"]:
+    exec "nim c --path:src --nimcache:" & cache & "/" & name &
+         " --debugger:native --passC:--coverage --passL:--coverage" &
+         " -o:build/cov_" & name & " tests/" & name & ".nim"
+    exec "./build/cov_" & name
   exec "lcov --capture --directory " & cache & " --base-directory ." &
        " --include \"*/src/UniContext/*\" --ignore-errors mismatch" &
        " --output-file lcov.info --quiet"
