@@ -69,9 +69,20 @@ visibility = "private"
 """)
     let manifest = loadManifest(manifestPath)
     createDir(base / "sessions")
-    createSymlink(outside, base / "sessions" / "redirected")
-    expect ManifestError:
-      discard sessionStart(manifest, "redirected", "unicontext", "Must stay inside the root")
+    # Creating one needs a privilege Windows grants only under Developer Mode
+    # or to an administrator, and the runner has neither -- so the redirect
+    # this checks for cannot be built there. Said out loud rather than skipped
+    # silently: the guard itself is the same code on every platform.
+    var redirected = true
+    try:
+      createSymlink(outside, base / "sessions" / "redirected")
+    except OSError:
+      redirected = false
+      echo "skipped: this platform refused to create the symbolic link"
+    if redirected:
+      expect ManifestError:
+        discard sessionStart(manifest, "redirected", "unicontext",
+          "Must stay inside the root")
 
     removeTree(base)
     removeTree(outside)
