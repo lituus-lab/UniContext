@@ -6,7 +6,14 @@ import UniContext/workspace/manifest
 proc removeTree(path: string) =
   if not dirExists(path): return
   for kind, child in walkDir(path):
-    if kind == pcDir: removeTree(child)
+    case kind
+    of pcDir: removeTree(child)
+    # A link to a directory, never walked into: recursing would delete what it
+    # points at rather than the link. Windows removes it as a directory --
+    # `removeFile` there is "Access is denied" -- and POSIX unlinks it, where
+    # `removeDir` fails instead. Both measured.
+    of pcLinkToDir:
+      when defined(windows): removeDir(child) else: removeFile(child)
     else: removeFile(child)
   removeDir(path)
 
