@@ -83,6 +83,32 @@ Actual content.
     check "# Still code" in note.sections[0].content
     check note.sections[1].heading == "Actual section"
 
+  test "a four-space-indented fence stays inside the block":
+    # The trap is the unindented heading after it: if the indented fence closed
+    # the block, that line would become a third section.
+    let note = parseMarkdown("""---
+id: lesson.indented-fence
+type: lesson
+status: accepted
+visibility: private
+authority: test
+updated: 2026-08-21
+---
+# Indented fences
+
+```markdown
+    ```
+## Not a heading, this is inside the block
+```
+
+## Actual section
+
+Actual content.
+""", "indented-fence.md")
+    check note.sections.len == 2
+    check "## Not a heading" in note.sections[0].content
+    check note.sections[1].heading == "Actual section"
+
   test "rejects duplicate YAML keys and invalid enum values":
     expect MarkdownError:
       discard parseMarkdown("""---

@@ -75,7 +75,13 @@ proc parseMarkdown*(content, path: string): KnowledgeNote =
       # and carries nothing else: inside a four-backtick block, a line of three
       # is content. Keeping only three characters closed it there.
       let closing = fenceRun(stripped)
-      if closing.len >= fence.len and closing[0] == fence[0] and
+      # At most three spaces may precede a closing fence; four or more make the
+      # line indented code inside the block, so the raw line decides, not the
+      # stripped one.
+      var indent = 0
+      while indent < lines[index].len and lines[index][indent] ==
+          ' ': inc indent
+      if indent <= 3 and closing.len >= fence.len and closing[0] == fence[0] and
           stripped.len == closing.len:
         fence = ""
       continue

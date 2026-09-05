@@ -41,9 +41,22 @@ const MaxNoteBytes = 4 * 1024 * 1024
   ## file is already in memory by the time it is refused.
 
 proc readNote(path: string): string =
+  ## At most `MaxNoteBytes`, enforced while reading.
+  ##
+  ## The size is checked first as a fast path, but a file can grow between the
+  ## question and the read, so the limit is also applied to what actually
+  ## arrives -- one open handle, refused as soon as it goes past.
   if getFileSize(path) > MaxNoteBytes:
     raise newException(IOError, path & ": Markdown note exceeds 4 MiB")
-  readFile(path)
+  var file = open(path, fmRead)
+  defer: file.close
+  var chunk = newString(64 * 1024)
+  while true:
+    let read = file.readBuffer(addr chunk[0], chunk.len)
+    if read <= 0: break
+    if result.len + read > MaxNoteBytes:
+      raise newException(IOError, path & ": Markdown note exceeds 4 MiB")
+    result.add(chunk[0 ..< read])
 
 proc addRoot(root, rootName, rootVisibility: string; database: Store;
     report: var IndexReport; seenIds: var HashSet[string];

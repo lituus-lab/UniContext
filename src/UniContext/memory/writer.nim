@@ -66,6 +66,15 @@ proc writeNew(manifest: Manifest; path, content: string) =
     # symlink out of the allowed roots.
     discard manifest.secureWriteDirectory(parent)
   createExclusively(path, content)
+  # Where the file actually landed, not where it was asked to land. `O_EXCL`
+  # and `CREATE_NEW` settle the final name, but a parent replaced by a symlink
+  # between authorisation and creation redirects the whole path -- so the
+  # result is checked and withdrawn rather than left outside the roots.
+  let landed = try: path.expandFilename except OSError: path
+  if not manifest.containsPath(landed):
+    removeFile(path)
+    raise newException(MemoryWriteError,
+      "write landed outside the allowed roots and was withdrawn: " & landed)
 
 proc requireDirectory(manifest: Manifest; path, label: string): string =
   if path.len == 0:
@@ -129,6 +138,8 @@ proc sessionUpdate*(manifest: Manifest; sessionId, eventId,
   # had happened before it.
   if fileExists(directory / "999-close.md"):
     raise newException(MemoryWriteError, "session is closed: " & sessionId)
+  # Checked again below, after the event exists: nothing here serialises two
+  # processes, so a close can land between this check and the write.
   result = directory / ("500-" & eventId & ".md")
   let noteId = "session." & sessionId & "." & eventId
   let body = "---\nid: " & yaml(noteId) &
@@ -137,6 +148,10 @@ proc sessionUpdate*(manifest: Manifest; sessionId, eventId,
         "\n---\n# Session update\n\n" &
     summary.strip & "\n"
   writeNew(manifest, result, body)
+  if fileExists(directory / "999-close.md"):
+    removeFile(result)
+    raise newException(MemoryWriteError, "session was closed while the event " &
+      "was being written, and the event was withdrawn: " & sessionId)
 
 proc sessionClose*(manifest: Manifest; sessionId, outcome,
     nextAction: string): string =
