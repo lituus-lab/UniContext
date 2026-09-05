@@ -27,6 +27,14 @@ def abi_version():
     return unicontext_abi_version()
 
 
-def valid_budget(int tokens):
-    """True when tokens is an acceptable context-packet budget."""
-    return unicontext_valid_budget(tokens) != 0
+def valid_budget(tokens):
+    """True when tokens is an acceptable context-packet budget.
+
+    Answers for any Python integer. Declaring the parameter as a C int made
+    Cython raise OverflowError for one too large to fit, which the C ABI never
+    does -- and a budget that cannot be represented is simply not acceptable.
+    """
+    value = int(tokens)
+    if value < -2147483648 or value > 2147483647:
+        return False
+    return unicontext_valid_budget(<int>value) != 0

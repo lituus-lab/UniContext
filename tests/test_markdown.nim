@@ -58,6 +58,31 @@ Actual content.
     check "# This is code" in note.sections[0].content
     check note.sections[1].heading == "Actual section"
 
+  test "a longer fence is not closed by a shorter one inside it":
+    let note = parseMarkdown("""---
+id: lesson.long-fence
+type: lesson
+status: accepted
+visibility: private
+authority: test
+updated: 2026-08-21
+---
+# Nested fences
+
+````markdown
+```
+# Still code, inside the outer block
+```
+````
+
+## Actual section
+
+Actual content.
+""", "long-fence.md")
+    check note.sections.len == 2
+    check "# Still code" in note.sections[0].content
+    check note.sections[1].heading == "Actual section"
+
   test "rejects duplicate YAML keys and invalid enum values":
     expect MarkdownError:
       discard parseMarkdown("""---

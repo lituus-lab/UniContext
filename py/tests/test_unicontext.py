@@ -18,3 +18,8 @@ def test_budget_contract_matches_the_bounds():
     assert not valid_budget(BUDGET_MIN - 1)
     assert not valid_budget(BUDGET_MAX + 1)
     assert not valid_budget(0)
+
+
+def test_out_of_c_range_is_answered_not_raised():
+    assert not valid_budget(2**63)
+    assert not valid_budget(-(2**63))
