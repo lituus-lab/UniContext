@@ -49,6 +49,15 @@ proc headingOf(line: string; level: var int): string =
     return ""
   result = line[level + 1 .. ^1].strip
 
+proc fenceRun(line: string): string =
+  ## The leading run of ``` or ~~~ characters, empty when the line opens no
+  ## fenced block.
+  if line.len < 3 or line[0] notin {'`', '~'}: return ""
+  var length = 0
+  while length < line.len and line[length] == line[0]: inc length
+  if length < 3: return ""
+  line[0 ..< length]
+
 proc parseMarkdown*(content, path: string): KnowledgeNote =
   let lines = content.splitLines
   var bodyStart = 0
@@ -62,10 +71,17 @@ proc parseMarkdown*(content, path: string): KnowledgeNote =
     if fence.len > 0:
       current.content.add(lines[index])
       current.content.add('\n')
-      if stripped.startsWith(fence): fence = ""
+      # A closing fence is at least as long as the one that opened the block
+      # and carries nothing else: inside a four-backtick block, a line of three
+      # is content. Keeping only three characters closed it there.
+      let closing = fenceRun(stripped)
+      if closing.len >= fence.len and closing[0] == fence[0] and
+          stripped.len == closing.len:
+        fence = ""
       continue
-    if stripped.startsWith("```") or stripped.startsWith("~~~"):
-      fence = stripped[0 .. 2]
+    let opening = fenceRun(stripped)
+    if opening.len > 0:
+      fence = opening
       current.content.add(lines[index])
       current.content.add('\n')
       continue
