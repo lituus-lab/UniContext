@@ -34,7 +34,9 @@ def vendor_nim_source():
     os.makedirs(VENDOR)
     for filename in [NIMBLE_FILE, "config.nims"]:
         shutil.copy2(os.path.join(ROOT, filename), os.path.join(VENDOR, filename))
-    for directory in ["src", "include"]:
+    # `tools` as well as the sources: `ensure_library` builds the failure gate
+    # from `tools/gate.nim`, so an sdist without it cannot build the library.
+    for directory in ["src", "include", "tools"]:
         shutil.copytree(os.path.join(ROOT, directory), os.path.join(VENDOR, directory))
 
 
