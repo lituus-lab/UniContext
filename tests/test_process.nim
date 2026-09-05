@@ -19,6 +19,9 @@ proc run(arguments: openArray[string]; workingDirectory: string): tuple[
   let process = startProcess(TestBinary, workingDir = workingDirectory,
     args = @arguments,
     options = {poStdErrToStdOut})
+  # Closed however this returns: a read that raises would otherwise leak the
+  # handle, and a suite that leaks one per failing case runs out of them.
+  defer: process.close()
   # Exit first, then read: on a Windows pipe `readAll` returns what happens to
   # be buffered rather than blocking to end of file, and CI captured exactly
   # one byte of the message. Safe here because the command's output is far
@@ -26,12 +29,14 @@ proc run(arguments: openArray[string]; workingDirectory: string): tuple[
   # size, and nothing this CLI prints approaches it.
   result.code = process.waitForExit()
   result.output = process.outputStream.readAll
-  process.close()
 
 suite "CLI and MCP inter-process integration":
   test "rebuilds an index and replays the portable MCP fixture":
     check fileExists(TestBinary)
     let base = getTempDir() / ("unicontext-process-" & $getTime().toUnix)
+    # Removed however this test ends: a failing check leaves the fixture behind
+    # otherwise, and the next run indexes it.
+    defer: removeTree(base)
     createDir(base)
     writeFile(base / "note.md", """---
 id: decision.process.fixture
@@ -92,6 +97,10 @@ visibility = "private"
 
     let server = startProcess(TestBinary, workingDir = base,
       args = @["serve", "--manifest", manifestPath], options = {})
+    # Ended however this test ends: a check that raises between here and the
+    # orderly shutdown below would leave the server running on the fixture the
+    # deferred cleanup is about to delete.
+    defer: server.close()
     let requestsPath = currentSourcePath.parentDir.parentDir / "fixtures" /
         "mcp" / "initialize.jsonl"
     var responses: seq[JsonNode]
@@ -123,5 +132,3 @@ visibility = "private"
 
     server.inputStream.close()
     check server.waitForExit() == 0
-    server.close()
-    removeTree(base)
