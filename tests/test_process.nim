@@ -55,6 +55,11 @@ visibility = "private"
     let missingIndex = run(["context", "--manifest", manifestPath,
       "--query", "process fixture"], base)
     check missingIndex.code != 0
+    # Escaped, and with its length: a value that prints as one character is
+    # either genuinely that, or an encoding that stops the terminal early.
+    if "knowledge index is missing" notin missingIndex.output:
+      echo "context exit ", missingIndex.code, ", ",
+        missingIndex.output.len, " bytes: ", missingIndex.output.escape
     check "knowledge index is missing" in missingIndex.output
 
     let indexed = run(["index", "--manifest", manifestPath], base)
