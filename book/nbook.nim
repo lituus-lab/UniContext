@@ -3,7 +3,7 @@
 ## The table of contents, and the two settings that decide the theme.
 ##
 ## Four chapters, read front to back: what a packet is, what gets into one,
-## what the budget leaves out, and how the three surfaces differ.
+## what the budget leaves out, and how the four surfaces differ.
 import std/tables
 import nimibook
 # `from ... import` and not a plain import: the theme module re-exports nimib

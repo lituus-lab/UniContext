@@ -50,7 +50,9 @@ nbCode:
 
 nbText: """
 Sections are considered in rank order, so a budget too small to hold everything
-keeps the highest-ranked notes. A section that does not fit is skipped, not
+keeps the highest-ranked notes that fit -- a later, shorter one can still get
+in after a longer one was passed over, and the packet warns how many did not.
+A section that does not fit is skipped, not
 truncated: half a note with its provenance line cut off is worse than no note.
 
 ## What warns
@@ -70,8 +72,9 @@ nbText: """
 
 `memory_context` accepts a repository path. UniContext then runs a fixed
 read-only set of `git` commands and puts the branch, the commit, a short status
-and a bounded diff into the packet — capped at **half** the budget, so live
-state can never crowd out the notes entirely. When it is cut, the packet says
+and a bounded diff into the packet. The status and the diff are the parts with
+no length of their own, and together they are capped at **half** the budget, so
+live state cannot crowd the notes out. When it is cut, the packet says
 that too.
 
 This is the one place where UniContext reads something outside the knowledge
