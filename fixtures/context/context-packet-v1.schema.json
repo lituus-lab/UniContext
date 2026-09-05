@@ -10,19 +10,43 @@
   "properties": {
     "context_version": { "const": 1 },
     "query": { "type": "string" },
-    "budget_tokens": { "type": "integer", "minimum": 128 },
+    "budget_tokens": { "type": "integer", "minimum": 128, "maximum": 32768 },
     "estimated_tokens": { "type": "integer", "minimum": 0 },
     "knowledge_index_fresh": { "type": "boolean" },
     "rendered_context": { "type": "string" },
     "git": {
       "type": "object",
-      "required": ["requested_path", "root", "branch", "commit", "status", "diff", "available", "truncated", "warning"]
+      "required": [
+        "requested_path", "root", "branch", "commit", "status", "diff",
+        "available", "truncated", "warning"
+      ],
+      "properties": {
+        "requested_path": { "type": "string" },
+        "root": { "type": "string" },
+        "branch": { "type": "string" },
+        "commit": { "type": "string" },
+        "status": { "type": "string" },
+        "diff": { "type": "string" },
+        "available": { "type": "boolean" },
+        "truncated": { "type": "boolean" },
+        "warning": { "type": "string" }
+      },
+      "additionalProperties": false
     },
     "sources": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "path", "heading", "authority", "updated", "stale"]
+        "required": ["id", "path", "heading", "authority", "updated", "stale"],
+        "properties": {
+          "id": { "type": "string" },
+          "path": { "type": "string" },
+          "heading": { "type": "string" },
+          "authority": { "type": "string" },
+          "updated": { "type": "string" },
+          "stale": { "type": "boolean" }
+        },
+        "additionalProperties": false
       }
     },
     "warnings": { "type": "array", "items": { "type": "string" } }
