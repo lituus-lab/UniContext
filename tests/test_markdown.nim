@@ -109,6 +109,17 @@ Actual content.
     check "## Not a heading" in note.sections[0].content
     check note.sections[1].heading == "Actual section"
 
+  test "a tab-indented fence stays inside the block":
+    let note = parseMarkdown("---\n" &
+      "id: lesson.tab-fence\ntype: lesson\nstatus: accepted\n" &
+      "visibility: private\nauthority: test\nupdated: 2026-08-21\n---\n" &
+      "# Tabbed fences\n\n```markdown\n" &
+      "\t```\n## Not a heading, this is inside the block\n```\n\n" &
+      "## Actual section\n\nActual content.\n", "tab-fence.md")
+    check note.sections.len == 2
+    check "## Not a heading" in note.sections[0].content
+    check note.sections[1].heading == "Actual section"
+
   test "rejects duplicate YAML keys and invalid enum values":
     expect MarkdownError:
       discard parseMarkdown("""---

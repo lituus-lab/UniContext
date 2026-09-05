@@ -72,9 +72,9 @@ nbText: """
 
 `memory_context` accepts a repository path. UniContext then runs a fixed
 read-only set of `git` commands and puts the branch, the commit, a short status
-and a bounded diff into the packet. The status and the diff are the parts with
-no length of their own, and together they are capped at **half** the budget, so
-live state cannot crowd the notes out. When it is cut, the packet says
+and a bounded diff into the packet. The status and the diff are together capped
+at **half** the budget, and the whole block is left out with a warning when it
+would not fit at all -- a worktree path is as long as someone made it. When it is cut, the packet says
 that too.
 
 This is the one place where UniContext reads something outside the knowledge
