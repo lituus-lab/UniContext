@@ -45,12 +45,17 @@ proc createExclusively(path: string): File =
       discard posix.close(descriptor)
       raise newException(MemoryWriteError, "cannot write: " & path)
 
-proc writeNew(path, content: string) =
+proc writeNew(manifest: Manifest; path, content: string) =
   if dirExists(path):
     raise newException(MemoryWriteError,
         "append-only write refused because target exists: " & path)
   let parent = path.parentDir
-  if not dirExists(parent): createDir(parent)
+  if not dirExists(parent):
+    createDir(parent)
+    # Re-checked after creation, as `requireDirectory` does: the path was
+    # authorised while it did not exist, and what appeared at it could be a
+    # symlink out of the allowed roots.
+    discard manifest.secureWriteDirectory(parent)
   var file = createExclusively(path)
   defer: file.close
   file.write(content)
@@ -83,7 +88,7 @@ proc propose*(manifest: Manifest; noteId, title, summary: string;
     for item in evidence:
       body.add("\n- " & item.replace("\n", " ").strip)
     body.add('\n')
-  writeNew(result, body)
+  writeNew(manifest, result, body)
 
 proc sessionDirectory(manifest: Manifest; sessionId: string): string =
   validateIdentifier(sessionId, "session_id")
@@ -102,7 +107,7 @@ proc sessionStart*(manifest: Manifest; sessionId, project,
     "authority: agent\ncreated: " & today() & "\nupdated: " & today() & "\n" &
     "project: " & yaml(project) & "\n---\n# Session start\n\n## Objective\n\n" &
     objective.strip & "\n"
-  writeNew(result, body)
+  writeNew(manifest, result, body)
 
 proc sessionUpdate*(manifest: Manifest; sessionId, eventId,
     summary: string): string =
@@ -124,7 +129,7 @@ proc sessionUpdate*(manifest: Manifest; sessionId, eventId,
     "created: " & today() & "\nupdated: " & today() &
         "\n---\n# Session update\n\n" &
     summary.strip & "\n"
-  writeNew(result, body)
+  writeNew(manifest, result, body)
 
 proc sessionClose*(manifest: Manifest; sessionId, outcome,
     nextAction: string): string =
@@ -142,4 +147,4 @@ proc sessionClose*(manifest: Manifest; sessionId, outcome,
     "## Outcome\n\n" & outcome.strip & "\n"
   if nextAction.strip.len > 0:
     body.add("\n## Next action\n\n" & nextAction.strip & "\n")
-  writeNew(result, body)
+  writeNew(manifest, result, body)
