@@ -149,9 +149,19 @@ proc callTool(manifest: Manifest; name: string; arguments: JsonNode): JsonNode =
     let query = arguments.argument("query")
     let budget = if arguments.hasKey("budget_tokens"): arguments[
         "budget_tokens"].getInt else: 4000
-    if budget < 128 or budget > 32_768:
-      raise newException(ValueError, "budget_tokens must be between 128 and 32768")
-    let git = collectGitState(arguments.optionalArgument("repository"))
+    if budget < MinBudgetTokens or budget > MaxBudgetTokens:
+      raise newException(ValueError, "budget_tokens must be between " &
+        $MinBudgetTokens & " and " & $MaxBudgetTokens)
+    # The manifest authorises reads as it already authorises writes: without
+    # this, a client could name any worktree on the host and read back its
+    # branch, status and diff through the packet.
+    let requested = arguments.optionalArgument("repository")
+    let git =
+      if requested.len == 0 or manifest.containsPath(requested):
+        collectGitState(requested)
+      else:
+        GitState(requestedPath: requested,
+          warning: "repository is outside the manifest's allowed roots")
     let indexFresh = manifest.indexIsFresh
     let initialWarnings = if indexFresh: @[] else:
       @["knowledge index is stale; rebuild it before relying on memory"]
