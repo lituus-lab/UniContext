@@ -98,17 +98,26 @@ proc buildContextPacket*(query: string; hits: seq[SearchHit]; budgetTokens: int;
       let room = max(0, diffLimit - marker.len)
       result.git.diff = result.git.diff[0 ..< room] & marker
   if result.git.available:
-    result.rendered.add("\n## Live repository\n\n")
-    result.rendered.add("- root: `" & result.git.root & "`\n")
-    result.rendered.add("- branch: `" & result.git.branch & "`\n")
-    result.rendered.add("- commit: `" & result.git.commit & "`\n")
+    # Assembled first, then measured: `gitLimit` bounds the status and the diff,
+    # but a worktree path is as long as someone made it and the code fences are
+    # not free either. A root of 600 characters used to overrun a 128-token
+    # packet on its own.
+    var gitBlock = "\n## Live repository\n\n"
+    gitBlock.add("- root: `" & result.git.root & "`\n")
+    gitBlock.add("- branch: `" & result.git.branch & "`\n")
+    gitBlock.add("- commit: `" & result.git.commit & "`\n")
     if result.git.status.len > 0:
-      result.rendered.add("\n### Git status\n\n```text\n" & result.git.status & "\n```\n")
+      gitBlock.add("\n### Git status\n\n```text\n" & result.git.status & "\n```\n")
     if result.git.diff.len > 0:
-      result.rendered.add("\n### Working-tree diff\n\n```diff\n" &
+      gitBlock.add("\n### Working-tree diff\n\n```diff\n" &
           result.git.diff & "\n```\n")
-    if result.git.truncated:
-      result.warnings.add("live Git output was truncated")
+    if result.rendered.len + gitBlock.len <= maxChars:
+      result.rendered.add(gitBlock)
+      if result.git.truncated:
+        result.warnings.add("live Git output was truncated")
+    else:
+      result.git.truncated = true
+      result.warnings.add("live Git state did not fit the token budget")
   elif result.git.warning.len > 0:
     result.warnings.add(result.git.warning)
   # Counted, then reported once: a packet that quietly holds less than the

@@ -78,9 +78,14 @@ proc parseMarkdown*(content, path: string): KnowledgeNote =
       # At most three spaces may precede a closing fence; four or more make the
       # line indented code inside the block, so the raw line decides, not the
       # stripped one.
+      # Columns, not characters: a tab advances to the next multiple of four,
+      # so one already puts the marker past the three a closing fence may
+      # carry. Counting spaces alone left a tab-indented fence at zero.
       var indent = 0
-      while indent < lines[index].len and lines[index][indent] ==
-          ' ': inc indent
+      for character in lines[index]:
+        if character == ' ': inc indent
+        elif character == '\t': indent = (indent div 4 + 1) * 4
+        else: break
       if indent <= 3 and closing.len >= fence.len and closing[0] == fence[0] and
           stripped.len == closing.len:
         fence = ""

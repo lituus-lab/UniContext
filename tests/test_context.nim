@@ -60,6 +60,15 @@ suite "Context compilation":
     let gitLimit = max(128, max(256, 500 * 4) div 2)
     check packet.git.status.len + packet.git.diff.len <= gitLimit
 
+  test "a long worktree path cannot overrun the packet on its own":
+    # No status, no diff, nothing for `gitLimit` to trim: the path alone used
+    # to be appended whatever it cost.
+    let git = GitState(root: repeat("d", 600), branch: "main",
+      commit: "abc123", available: true)
+    let packet = buildContextPacket("inspect", @[], 128, "2026-08-21", git)
+    check packet.estimatedTokens <= packet.budgetTokens
+    check "live Git state did not fit the token budget" in packet.warnings
+
   test "clips an oversized task to the packet budget":
     let packet = buildContextPacket(repeat("large task ", 1000), @[], 128, "2026-08-21")
     check packet.estimatedTokens <= packet.budgetTokens

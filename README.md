@@ -92,8 +92,9 @@ and cannot write canonical memory directly.
 
 `memory_context` accepts an optional `repository` path. UniContext then invokes `git` with a fixed
 read-only command set and adds the worktree root, branch, commit, short status and a bounded
-unstaged diff. The status and the diff -- the two parts with no bound of their
-own -- are together capped at half the packet budget. A caller should not pass a
+unstaged diff. The status and the diff are together capped at half the packet
+budget, and the whole block is dropped with a warning when it would not fit the
+packet at all. A caller should not pass a
 private worktree to a remote model unless sharing its status and diff is acceptable.
 
 ## Non-goals
