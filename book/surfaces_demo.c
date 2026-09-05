@@ -1,15 +1,14 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Copyright 2026 lituus-lab */
-/* Run by book/surfaces.nim during the book build; its output is the page's. */
+/* Compiled and run by the Surfaces chapter, not transcribed into it. */
 #include <stdio.h>
 #include "UniContext.h"
 
 int main(void) {
-  printf("unicontext_version()            = %s\n", unicontext_version());
-  printf("unicontext_fibonacci(10)        = %lld\n", unicontext_fibonacci(10));
-  printf("unicontext_fibonacci(-1)        = %lld   (clamped, not an error)\n",
-         unicontext_fibonacci(-1));
-  printf("unicontext_fibonacci(200)       = %lld   (clamped to n = %d)\n",
-         unicontext_fibonacci(200), UNICONTEXT_FIB_MAX_N);
+  printf("version %s, ABI generation %d\n", unicontext_version(),
+         unicontext_abi_version());
+  const int budgets[] = {0, UNICONTEXT_BUDGET_MIN, UNICONTEXT_BUDGET_MAX + 1};
+  for (size_t i = 0; i < sizeof(budgets) / sizeof(budgets[0]); i++)
+    printf("%6d -> %d\n", budgets[i], unicontext_valid_budget(budgets[i]));
   return 0;
 }

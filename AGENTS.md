@@ -11,10 +11,20 @@ nim c --hints:off -o:build/unigate tools/gate.nim   # the failure gate, once
 build/unigate testAll    # Nim debug + release + C ABI
 build/unigate pyTest     # Cython + pytest (needs libUniContext.so)
 build/unigate example
+build/unigate cli        # the `unicontext` command, into build/
 build/unigate coverage   # gcov + lcov -> coverage/ (needs lcov; linux/macOS)
 build/unigate docs       # nimib book + API reference -> pages/ (needs nimib)
 build/unigate canary     # must fail
 ```
+
+Two sibling engines are declared in `UniContext.nimble` and fetched from
+their own repositories: UniDatabase, reached only by `database/store`, and
+UniMCP, reached only by `protocol/mcp_server`. `vgraph.cfg` records both the
+layer order and that confinement; `checkVGraph` fails an import from anywhere
+else, or a `requires` on a `Uni*` package that `[engines]` does not list.
+
+The command lives at `src/UniContext/cli.nim`, never `src/unicontext.nim`:
+on a case-insensitive filesystem that is the `src/UniContext.nim` umbrella.
 
 Never `nimble <task>` bare where the answer matters: nimble 0.22 exits 0 even
 when an `exec` inside the task failed. The gate reads the task's own success
@@ -54,5 +64,7 @@ coverage on ubuntu; a canary job that must fail; `all-green` over all of them.
 
 ## Scope
 
-GitHub template repository for the `Uni*` family: "Use this template" starts an
-engine with the layout, the gates and the CI in place. Apache-2.0, DCO.
+Compile readable, version-controlled knowledge sources into short, sourced
+context packets: Markdown notes and their Git history are canonical, the SQLite
+index is derived and rebuildable, and the MCP server is how an agent asks for a
+packet. Apache-2.0, DCO.

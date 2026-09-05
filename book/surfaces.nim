@@ -25,76 +25,80 @@ proc run(command: string): string =
 nbText: """
 # Surfaces
 
-The same function reaches three audiences, and out of its domain it does three
-different things. That is not an inconsistency to be tidied away — each surface
-does what its callers can act on — but it is the thing a reader most needs
-stated, so it is stated here rather than implied three times.
+UniContext reaches four kinds of caller, and they are not given the same thing.
 
-| Surface | Out of domain | Why |
+| Surface | What it gets | Out of range |
 |---|---|---|
-| Nim, debug | raises `PreConditionDefect` | the caller made a mistake and can be told |
-| Nim, release | no check | the contract compiled away |
-| C | **clamps** | a Nim exception unwinding into C is undefined behaviour |
-| Python | raises `ValueError` / `TypeError` | Python callers expect an exception |
+| Nim | the whole library | `buildContextPacket` raises `ValueError` |
+| MCP | JSON-RPC tools over stdio | a JSON-RPC error to the client |
+| C | version, ABI generation, budget predicate | **answered**, never raised |
+| Python | the C ABI through Cython | `valid_budget` returns `False` |
 
-## The C ABI clamps
+The asymmetry is deliberate. A packet is a document, not a struct: marshalling
+it through C would mean inventing an ownership convention for every string in
+it, so the packet crosses that boundary as JSON through the MCP surface
+instead. What the C ABI does offer is the one question a C caller must answer
+before it asks for a packet at all — is this budget acceptable?
 
-`unicontext_fibonacci(n)` answers for every `int` a caller can pass. Below the
-domain it gives 0, above it gives `fibonacci(FibMaxN)`. It never raises, and
-`{.raises: [].}` on the boundary is what proves that rather than a convention
-someone has to remember.
+## The C ABI answers, it does not raise
+
+A Nim exception unwinding into C is undefined behaviour, so
+`unicontext_valid_budget` answers for every `int` a caller can pass, including
+the ones outside the domain.
 """
 
 nbCode:
-  echo run("cc -Iinclude -o build/book_c_demo book/surfaces_demo.c " &
-          "libUniContext.a 2>&1 && ./build/book_c_demo")
+  echo readFile(Root / "book" / "surfaces_demo.c")
 
 nbText: """
-Clamping is a choice, not the only one. It suits a function that has an answer
-at every `n`; a library whose failure carries information — a parse that failed
-*where* — reports in-band instead, with a sentinel the caller must test. Say
-which one you chose, in the words the header uses.
-
-## The Python binding raises
-
-The binding checks the domain in Python before it reaches C, so the clamp is
-never observed from there. `FIB_MAX_N` is read from the C header through
-Cython rather than restated, so what a caller is checked against is exactly
-what the C ABI would clamp to.
+Built against the static library and run:
 """
 
 nbCode:
-  echo run("""PYTHONPATH=py python3 -c '
-import unicontext as u
-print("FIB_MAX_N from the header:", u.FIB_MAX_N)
-for bad in (-1, u.FIB_MAX_N + 1, 1.0):
-    try:
-        u.fibonacci(bad)
-    except (ValueError, TypeError) as exc:
-        print(f"  fibonacci({bad!r}) -> {type(exc).__name__}: {exc}")
-'""")
+  discard run("nimble clibStatic")
+  echo run("cc -Iinclude -O2 -Wall -Wextra -std=c11 " &
+    "-o build/surfaces_demo book/surfaces_demo.c libUniContext.a && " &
+    "./build/surfaces_demo")
 
 nbText: """
-## Where they differ in meaning, not syntax
+`1` for the smallest legal budget, `0` for zero and for one past the largest.
+No exit code, no error state to check: the answer *is* the return value.
 
-Three differences a caller has to know, none of which is visible from a
-signature:
+## The bounds are the header's
 
-- **The C surface answers where Nim refuses.** A C caller passing -1 gets 0,
-  not an error, so a C program cannot discover a bad index by calling this.
-  Validate before the boundary, not after it.
-- **The release build agrees with neither.** It has no check and no clamp; it
-  returns whatever the arithmetic gives, and aborts on overflow.
-- **`_core` is importable and unchecked.** `unicontext._core.fibonacci` is the
-  raw C call, and its own docstring says so. The domain check lives in the
-  package, not in the extension.
+Both the C demo above and the Python binding below read `UNICONTEXT_BUDGET_MIN`
+and `UNICONTEXT_BUDGET_MAX` from `include/UniContext.h`. Neither restates the
+numbers, so neither can drift from what the library enforces.
 
-## What this chapter is for
+## Python
 
-Every engine cloned from this template has this chapter, with its own three
-behaviours. If all three agree, say so — that is worth a sentence. If they do
-not, this is where a reader finds out, and finding out here is much cheaper
-than finding out from a caller's bug report.
+The wheel bundles the shared library, so a Python caller installs one thing.
+"""
+
+nbCode:
+  # The extension is built in place by `nimble buildCython`, so the chapter
+  # imports it from py/ rather than requiring the wheel to be installed.
+  discard run("nimble buildCython")
+  echo run("cd py && python3 -c \"import unicontext; " &
+    "print(unicontext.version(), unicontext.abi_version()); " &
+    "print(unicontext.BUDGET_MIN, unicontext.BUDGET_MAX); " &
+    "print(unicontext.valid_budget(0), unicontext.valid_budget(4096))\"")
+
+nbText: """
+## The command
+
+For a knowledge base on disk, the command is the shortest path: it indexes,
+searches, compiles a packet, and serves the MCP tools.
+
+```bash
+unicontext index   --manifest /absolute/path/to/unicontext.toml
+unicontext context --manifest /absolute/path/to/unicontext.toml \
+  --query "memory authority" --budget 4000
+unicontext serve   --manifest /absolute/path/to/unicontext.toml
+```
+
+`serve` is the surface an agent uses. `docs/integration.md` has the client
+declaration and the clients it has been checked against.
 """
 
 nbSave

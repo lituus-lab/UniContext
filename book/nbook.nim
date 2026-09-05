@@ -2,9 +2,8 @@
 # Copyright 2026 lituus-lab
 ## The table of contents, and the two settings that decide the theme.
 ##
-## Four chapters, because the standard asks a chapter for ten slots and a
-## single page cannot show them separately. What a reader takes from this book
-## is not fibonacci; it is the shape.
+## Four chapters, read front to back: what a packet is, what gets into one,
+## what the budget leaves out, and how the three surfaces differ.
 import std/tables
 import nimibook
 # `from ... import` and not a plain import: the theme module re-exports nimib
@@ -14,12 +13,12 @@ from lituus_theme import faviconTag
 
 var book = initBookWithToc:
   entry("UniContext", "index.nim")
-  entry("Fibonacci", "fibonacci.nim")
-  entry("Contracts", "contracts.nim")
+  entry("Ranking", "ranking.nim")
+  entry("Budget", "budget.nim")
   entry("Surfaces", "surfaces.nim")
 
 book.title = "UniContext"
-book.description = "The scaffold every lituus-lab Uni* engine starts from."
+book.description = "Knowledge sources compiled into sourced context packets."
 
 # The two BookConfig fields that select a theme. nimibook's inline script picks
 # between them with `prefers-color-scheme`, and localStorage overrides.
