@@ -86,7 +86,10 @@ visibility = "private"
     discard rebuildIndex(manifest)
     var server = newMcpServer(manifestPath)
 
-    let historical = server.handle(request(0, "initialize", %*{
+    # Its own server: a client initializes once, so negotiating twice against
+    # one server tests re-initialization rather than version selection.
+    var older = newMcpServer(manifestPath)
+    let historical = older.handle(request(0, "initialize", %*{
       "protocolVersion": "2024-11-05", "capabilities": {},
       "clientInfo": {"name": "maki", "version": "0.2.9"}}))
     check historical["result"]["protocolVersion"].getStr == "2024-11-05"
