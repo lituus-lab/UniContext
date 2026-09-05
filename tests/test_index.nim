@@ -23,6 +23,18 @@ suite "Index SQLite FTS5":
     check readFile(metadataFixture).replace("\r\n", "\n").strip ==
       MetadataSchemaSql.strip
 
+  test "recreate leaves a usable sections table":
+    # The database is already at the current schema version, which is exactly
+    # when the migration ladder has nothing left to run.
+    let path = getTempDir() / ("unicontext-recreate-" & $getTime().toUnix & ".db")
+    var store = openStore(path)
+    defer:
+      store.close
+      removeFile path
+    store.initialize
+    store.recreate
+    store.clear
+
   test "migrates schema version one and rejects future schemas":
     let base = getTempDir() / ("unicontext-schema-" & $getTime().toUnix)
     createDir(base)

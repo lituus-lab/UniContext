@@ -62,7 +62,14 @@ proc getMetadata*(store: Store; key: string): string =
 proc clear*(store: Store) = store.execute("DELETE FROM sections;")
 
 proc recreate*(store: Store) =
+  ## Drop the section index and build it again from the current schema.
+  ##
+  ## `initialize` cannot do the rebuilding: it is a migration ladder, and on a
+  ## database already at the current version every rung is skipped -- so the
+  ## table stayed dropped and every later statement failed with `no such
+  ## table: sections`.
   store.execute("DROP TABLE IF EXISTS sections;")
+  store.execute(SchemaSql)
   store.initialize
 
 proc add*(store: Store; note: KnowledgeNote; rootName: string) =
