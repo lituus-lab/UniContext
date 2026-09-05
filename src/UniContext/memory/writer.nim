@@ -1,5 +1,9 @@
 ## SPDX-License-Identifier: Apache-2.0
 import std/[json, os, strutils, times]
+when defined(windows):
+  import std/winlean
+else:
+  import std/posix
 import UniContext/workspace/manifest
 
 type MemoryWriteError* = object of IOError
@@ -14,13 +18,42 @@ proc validateIdentifier(value, label: string) =
 proc yaml(value: string): string =
   $(%value)
 
+proc createExclusively(path: string): File =
+  ## Create `path` and fail if anything is already there, in one operation.
+  ##
+  ## `fileExists` then `writeFile` leaves a window: a file appearing between
+  ## the two is silently overwritten, which is the one thing an append-only
+  ## store must never do. The platform call refuses instead.
+  when defined(windows):
+    let handle = createFileW(newWideCString(path), GENERIC_WRITE, 0, nil,
+      CREATE_NEW, FILE_ATTRIBUTE_NORMAL, Handle(0))
+    if handle == INVALID_HANDLE_VALUE:
+      raise newException(MemoryWriteError,
+          "append-only write refused because target exists: " & path)
+    if not open(result, FileHandle(handle), fmWrite):
+      discard closeHandle(handle)
+      raise newException(MemoryWriteError, "cannot write: " & path)
+  else:
+    # O_EXCL also settles the symlink case: POSIX requires the call to fail
+    # when the path is a symbolic link, dangling or not.
+    let descriptor = posix.open(path.cstring,
+      O_WRONLY or O_CREAT or O_EXCL, 0o644.Mode)
+    if descriptor < 0:
+      raise newException(MemoryWriteError,
+          "append-only write refused because target exists: " & path)
+    if not open(result, FileHandle(descriptor), fmWrite):
+      discard posix.close(descriptor)
+      raise newException(MemoryWriteError, "cannot write: " & path)
+
 proc writeNew(path, content: string) =
-  if fileExists(path) or dirExists(path) or symlinkExists(path):
+  if dirExists(path):
     raise newException(MemoryWriteError,
         "append-only write refused because target exists: " & path)
   let parent = path.parentDir
   if not dirExists(parent): createDir(parent)
-  writeFile(path, content)
+  var file = createExclusively(path)
+  defer: file.close
+  file.write(content)
 
 proc requireDirectory(manifest: Manifest; path, label: string): string =
   if path.len == 0:
@@ -79,6 +112,11 @@ proc sessionUpdate*(manifest: Manifest; sessionId, eventId,
   let directory = sessionDirectory(manifest, sessionId)
   if not fileExists(directory / "000-start.md"):
     raise newException(MemoryWriteError, "unknown session: " & sessionId)
+  # The events replay in filename order, and a `500-` update always sorts
+  # before `999-close`: one written after the close would read as though it
+  # had happened before it.
+  if fileExists(directory / "999-close.md"):
+    raise newException(MemoryWriteError, "session is closed: " & sessionId)
   result = directory / ("500-" & eventId & ".md")
   let noteId = "session." & sessionId & "." & eventId
   let body = "---\nid: " & yaml(noteId) &

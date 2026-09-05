@@ -43,6 +43,10 @@ visibility = "private"
       check parseMarkdown(readFile(path), path).validate.len == 0
     expect MemoryWriteError:
       discard sessionClose(manifest, "writer-fixture", "Overwrite", "")
+    # An update after the close would sort before it and read as earlier.
+    expect MemoryWriteError:
+      discard sessionUpdate(manifest, "writer-fixture", "after-close",
+        "Recorded once the session was already closed")
 
     removeTree(base)
 
