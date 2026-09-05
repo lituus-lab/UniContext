@@ -47,10 +47,27 @@ proc canonicalForCreation(path: string): string =
     result = result / component
   result = result.normalizedPath
 
+proc traversesLink(candidate, root: string): bool =
+  ## Whether any component between `root` and `candidate` is a symbolic link.
+  ##
+  ## Resolving the path cannot answer this everywhere: `expandFilename` is
+  ## `GetFullPathName` on Windows, which normalises without following a reparse
+  ## point, so a write directory replaced by a junction still looked as though
+  ## it sat inside the roots. Refusing the traversal needs no resolution and
+  ## says the same thing on every platform.
+  var current = candidate
+  while current.len > root.len and current.startsWith(root):
+    if symlinkExists(current): return true
+    let parent = current.parentDir
+    if parent == current: break
+    current = parent
+  false
+
 proc containsPath*(manifest: Manifest; candidate: string): bool =
   let canonical = canonicalForCreation(candidate)
   for root in manifest.roots:
-    if canonical.pathWithin(root.path): return true
+    if canonical.pathWithin(root.path):
+      return not traversesLink(canonical, root.path)
 
 proc secureWriteDirectory*(manifest: Manifest; path: string): string =
   result = canonicalForCreation(path)
