@@ -1,0 +1,3 @@
+# The SQL fixtures are compared byte for byte against the schema constants the
+# library compiles in, so they must reach every checkout with the same endings.
+*.sql text eol=lf

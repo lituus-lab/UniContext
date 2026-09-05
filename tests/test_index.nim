@@ -13,11 +13,15 @@ proc createDatabaseAtVersion(path: string; version: int; schema = "") =
 suite "Index SQLite FTS5":
   test "keeps the portable SQL fixture identical to the runtime schema":
     let fixture = currentSourcePath.parentDir.parentDir / "fixtures" / "sql" / "001-initial.sql"
-    check readFile(fixture).strip == SchemaSql.strip
+    # `.replace("\r\n", "\n")`, not a byte comparison: .gitattributes asks for
+    # LF, but a clone made before it, or a tool that rewrote the file, still
+    # has to fail on the SQL differing rather than on the endings.
+    check readFile(fixture).replace("\r\n", "\n").strip == SchemaSql.strip
     let metadataFixture = currentSourcePath.parentDir.parentDir / "fixtures" /
         "sql" /
       "002-metadata.sql"
-    check readFile(metadataFixture).strip == MetadataSchemaSql.strip
+    check readFile(metadataFixture).replace("\r\n", "\n").strip ==
+      MetadataSchemaSql.strip
 
   test "migrates schema version one and rejects future schemas":
     let base = getTempDir() / ("unicontext-schema-" & $getTime().toUnix)
