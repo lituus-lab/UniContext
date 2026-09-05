@@ -7,10 +7,11 @@ author        = "lituus-lab"
 description   = "Compile knowledge sources into sourced context packets"
 license       = "Apache-2.0"
 srcDir        = "src"
-# The CLI cannot live at `src/unicontext.nim`: on a case-insensitive
-# filesystem that is the same path as the `src/UniContext.nim` umbrella, so
-# it sits under the package directory and is renamed on the way out.
-namedBin["UniContext/cli"] = "unicontext"
+# No `bin`/`namedBin`: declaring one makes `nimble install` build the command
+# from a copied tree where nimble 0.22 hands the compiler `<pkg>/src` for each
+# dependency while installing them flattened, so `UniDatabase/sqlite` is not
+# found -- reproduced on Windows CI and locally. `nimble cli` builds it into
+# build/, and `tests/test_process` drives that binary.
 
 const CliBinary = "build/unicontext".toExe
 

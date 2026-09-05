@@ -63,6 +63,10 @@ echo packet.estimatedTokens <= packet.budgetTokens  # true
 
 ## Command
 
+The command is built by its own task rather than installed by `nimble
+install`: declaring a binary makes install build it from a copied tree where
+nimble cannot resolve the engines this library imports.
+
 ```sh
 nimble cli
 ./build/unicontext index   --manifest /absolute/path/to/unicontext.toml
