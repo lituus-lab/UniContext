@@ -18,20 +18,26 @@ proc validateIdentifier(value, label: string) =
 proc yaml(value: string): string =
   $(%value)
 
-proc createExclusively(path: string): File =
-  ## Create `path` and fail if anything is already there, in one operation.
+proc createExclusively(path, content: string) =
+  ## Create `path` with `content`, and fail if anything is already there.
   ##
   ## `fileExists` then `writeFile` leaves a window: a file appearing between
   ## the two is silently overwritten, which is the one thing an append-only
   ## store must never do. The platform call refuses instead.
   when defined(windows):
+    # Written through the Win32 handle rather than reopened by name: a HANDLE
+    # is not a CRT file descriptor, and handing one to `open` fails.
     let handle = createFileW(newWideCString(path), GENERIC_WRITE, 0, nil,
       CREATE_NEW, FILE_ATTRIBUTE_NORMAL, Handle(0))
     if handle == INVALID_HANDLE_VALUE:
       raise newException(MemoryWriteError,
           "append-only write refused because target exists: " & path)
-    if not open(result, FileHandle(handle), fmWrite):
-      discard closeHandle(handle)
+    defer: discard closeHandle(handle)
+    var written: int32 = 0
+    let source = if content.len > 0: unsafeAddr content[0] else: nil
+    # Qualified: `system.writeFile` has the same name.
+    if winlean.writeFile(handle, source, int32(content.len), addr written,
+        nil) == 0 or int(written) != content.len:
       raise newException(MemoryWriteError, "cannot write: " & path)
   else:
     # O_EXCL also settles the symlink case: POSIX requires the call to fail
@@ -41,9 +47,12 @@ proc createExclusively(path: string): File =
     if descriptor < 0:
       raise newException(MemoryWriteError,
           "append-only write refused because target exists: " & path)
-    if not open(result, FileHandle(descriptor), fmWrite):
+    var file: File
+    if not open(file, FileHandle(descriptor), fmWrite):
       discard posix.close(descriptor)
       raise newException(MemoryWriteError, "cannot write: " & path)
+    defer: file.close
+    file.write(content)
 
 proc writeNew(manifest: Manifest; path, content: string) =
   if dirExists(path):
@@ -56,9 +65,7 @@ proc writeNew(manifest: Manifest; path, content: string) =
     # authorised while it did not exist, and what appeared at it could be a
     # symlink out of the allowed roots.
     discard manifest.secureWriteDirectory(parent)
-  var file = createExclusively(path)
-  defer: file.close
-  file.write(content)
+  createExclusively(path, content)
 
 proc requireDirectory(manifest: Manifest; path, label: string): string =
   if path.len == 0:
