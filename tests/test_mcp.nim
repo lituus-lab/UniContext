@@ -1,5 +1,5 @@
 ## SPDX-License-Identifier: Apache-2.0
-import std/[json, os, strutils, times, unittest]
+import std/[sequtils, json, os, strutils, times, unittest]
 import UniContext/[index/indexer, protocol/mcp_server]
 import UniContext/workspace/manifest
 
@@ -119,6 +119,18 @@ visibility = "private"
     check called["result"]["structuredContent"].hasKey("git")
     check called["result"]["content"][0]["text"].getStr.startsWith("# Context packet v1")
     check not called["result"]["content"][0]["text"].getStr.startsWith("{")
+
+    # A worktree outside the manifest is refused rather than read: the packet
+    # comes back with a warning and no branch, commit, status or diff.
+    let outside = server.handle(request(6, "tools/call", %*{
+      "name": "memory_context",
+      "arguments": {"query": "context provenance", "budget_tokens": 500,
+        "repository": getCurrentDir()}}))
+    check outside["result"]["isError"].getBool == false
+    let git = outside["result"]["structuredContent"]["git"]
+    check git["available"].getBool == false
+    check "outside the manifest" in outside["result"]["structuredContent"][
+      "warnings"].getElems.mapIt(it.getStr).join(" ")
 
     let proposed = server.handle(request(4, "tools/call", %*{
       "name": "memory_propose",
