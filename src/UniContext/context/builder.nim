@@ -92,8 +92,11 @@ proc buildContextPacket*(query: string; hits: seq[SearchHit]; budgetTokens: int;
     result.git.status = result.git.status[0 ..< statusLimit]
     let diffLimit = max(0, gitLimit - result.git.status.len)
     if result.git.diff.len > diffLimit:
-      result.git.diff = result.git.diff[0 ..< diffLimit]
-      result.git.diff.add("\n[output truncated by UniContext]")
+      # The marker is part of what the budget pays for: appended after slicing
+      # to the limit, it put the packet over the cap it had just enforced.
+      const marker = "\n[output truncated by UniContext]"
+      let room = max(0, diffLimit - marker.len)
+      result.git.diff = result.git.diff[0 ..< room] & marker
   if result.git.available:
     result.rendered.add("\n## Live repository\n\n")
     result.rendered.add("- root: `" & result.git.root & "`\n")

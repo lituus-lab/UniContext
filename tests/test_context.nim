@@ -55,6 +55,10 @@ suite "Context compilation":
     check packet.git.truncated
     check packet.estimatedTokens <= packet.budgetTokens
     check "live Git output was truncated" in packet.warnings
+    # The cap counts the marker too: appending it after slicing to the limit
+    # put the pair back over the half-budget the code had just enforced.
+    let gitLimit = max(128, max(256, 500 * 4) div 2)
+    check packet.git.status.len + packet.git.diff.len <= gitLimit
 
   test "clips an oversized task to the packet budget":
     let packet = buildContextPacket(repeat("large task ", 1000), @[], 128, "2026-08-21")
