@@ -19,8 +19,13 @@ proc run(arguments: openArray[string]; workingDirectory: string): tuple[
   let process = startProcess(TestBinary, workingDir = workingDirectory,
     args = @arguments,
     options = {poStdErrToStdOut})
-  result.output = process.outputStream.readAll
+  # Exit first, then read: on a Windows pipe `readAll` returns what happens to
+  # be buffered rather than blocking to end of file, and CI captured exactly
+  # one byte of the message. Safe here because the command's output is far
+  # smaller than a pipe buffer -- draining after exit cannot deadlock at this
+  # size, and nothing this CLI prints approaches it.
   result.code = process.waitForExit()
+  result.output = process.outputStream.readAll
   process.close()
 
 suite "CLI and MCP inter-process integration":
